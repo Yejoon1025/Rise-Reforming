@@ -1,0 +1,35 @@
+General:
+1. Edit the Text
+2. Edit the images - Image and video doesn't work because of the aspect ratio?
+    a. Regenerate: Get rid of recycling, DME storage tanks, No emissions
+    b. Friend for Colour Correction
+    c. AI Mark get rid
+    d. Colour correct the website? - create both versions!
+
+    Biogas -> Farm!!
+
+About:
+1. Fix the transitions - Keep showing wrong image or showing in between
+2. Delete pages after the transitions
+3. Show loading only for first load?
+4. Footer?
+5. fix glowdot jump -> ONly back to base and not to the main
+
+At end -> have a liason to learn about tech!
+
+Next Steps:
+Landing page
+1. News page - CMS?
+2. Team page
+Edits
+3. Push to Git and upload (AUG) - 31.
+4. Mobile Version (Sep 12)
+5. Analytics / SEO Optimization
+
+To do:
+Show website, text check
+Explain
+//1. Font
+//2. transitions / images
+//3. CMS
+4. Timeline

@@ -1,0 +1,75 @@
+@import "tailwindcss";
+/* Web fallback (free) */
+@import url("https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&display=swap");
+
+/* Local Windows font */
+@font-face {
+  font-family: "Bahnschrift";
+  src: local("Bahnschrift");
+  font-display: swap;
+}
+
+/* Tailwind v4 theming: sets what `font-sans` means */
+@theme {
+  --font-sans: "Bahnschrift", "Barlow", system-ui, -apple-system, "Segoe UI",
+               Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+
+  --color-brand-dark: #1a1f23;
+}
+
+/* Apply Tailwind’s font-sans to the whole page */
+@layer base {
+  body { @apply font-sans; }
+}
+
+/* Background brighten (container) */
+@keyframes bg-brighten {
+  0%   { background-color: #0a0d0f; } /* almost black */
+  100% { background-color: #1a1f23; } /* brand dark */
+}
+.animate-bg-brighten { animation: bg-brighten 1600ms ease-in-out forwards; }
+
+/* Flame entrance */
+@keyframes flame-in {
+  0%   { opacity: 0; transform: scale(0.75); filter: brightness(1) saturate(1); }
+  60%  { opacity: 1; transform: scale(1.06); filter: brightness(1.05) saturate(1.05); }
+  100% { opacity: 1; transform: scale(1);    filter: brightness(1) saturate(1); }
+}
+.animate-flame-in { animation: flame-in 700ms ease-out forwards; }
+
+/* Flame glow ramp synced with bg/image brighten */
+@keyframes flame-glow {
+  0%   { filter: brightness(1.0) drop-shadow(0 4px 12px rgba(248,218,156,0.35)); }
+  60%  { filter: brightness(1.18) drop-shadow(0 0 34px rgba(248,218,156,0.80)); }
+  100% { filter: brightness(1.05) drop-shadow(0 6px 18px rgba(248,218,156,0.45)); }
+}
+.animate-flame-glow { animation: flame-glow 1600ms ease-in-out forwards; }
+
+/* Opacity-only fade-in for the wordmark (no glow, no movement) */
+@keyframes wordmark-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-wordmark-fade-in {
+  animation: wordmark-fade-in 600ms ease-out forwards;
+}
+
+/* Smooth GPU-accelerated slide-up for the splash container */
+@keyframes splash-exit {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(0, -100%, 0); }
+}
+
+.animate-splash-exit {
+  animation: splash-exit var(--splash-exit-ms, 1200ms)
+             cubic-bezier(0.22, 1, 0.36, 1) /* easeOutCubic */
+             forwards;
+  will-change: transform;
+  contain: paint;
+  backface-visibility: hidden;
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-splash-exit { animation-duration: 200ms; }
+}
