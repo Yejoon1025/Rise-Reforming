@@ -1,5 +1,5 @@
 import { useRef } from "react"
-import bg from "../assets/TechBG.png"
+import bg from "../assets/unedited/Tech.png"
 import { GlowDotProvider } from "../components/GlowDotProvider"
 import { PinnedGlowDot } from "../components/PinnedGlowDot"
 import Navbar from "../components/Navbar"
@@ -16,11 +16,11 @@ export function Tech() {
       style={{ backgroundImage: `url(${bg})` }}
     >
       <Navbar />
-          <div className="h-full w-full flex items-center justify-center">
-              <h2 className="font-bahnschrift text-4xl md:text-6xl text-[#f8da9c] px-6 text-center">
-                  Rise's proprietary process is
-              </h2>
-          </div>
+      <div className="h-full w-full flex items-center justify-center">
+        <h2 className="font-bahnschrift text-4xl md:text-6xl text-[#f8da9c] px-6 text-center">
+          Rise's proprietary process is
+        </h2>
+      </div>
 
       <GlowDotProvider
         baseRef={sectionRef}

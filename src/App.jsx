@@ -5,6 +5,9 @@ import { Routes, Route, Navigate } from "react-router-dom"
 import LoadingSplash from "./pages/LoadingSplash"
 import { HomeOne } from "./pages/HomeOne"
 import { Tech } from "./pages/Tech"
+import { TeamPage } from "./pages/TeamPage"
+import {NewsPage} from "./pages/NewsPage"
+import { TechTwo } from "./pages/TechTwo"
 
 import Footer from "./components/Footer"
 import { Temporary } from "./pages/Temporary"
@@ -16,16 +19,14 @@ export default function App() {
     <div className="min-h-dvh bg-brand-dark text-white">
       {showSplash && <LoadingSplash onDone={() => setShowSplash(false)} />}
 
-      <Temporary />
-      {/*
       <Routes>
         <Route path="/about" element={<HomeOne />} />
         <Route path="/tech" element={<Tech />} />
-        <Route path="/team" element={<HomeOne />} />
-        <Route path="/news" element={<HomeOne />} />
-        <Route path="*" element={<Navigate to="/about" replace />} />
+        <Route path="/team" element={<TeamPage />} />
+        <Route path="/news" element={<NewsPage />} />
+        <Route path="*" element={<Temporary/>} />
       </Routes>
-      */}
     </div>
   )
 }
+// <Route path="*" element={<Navigate to="/about" replace />} />
