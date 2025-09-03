@@ -2,7 +2,7 @@ export const newsTimelineItems = [
   {
     date: "July 10, 2024",
     body: "Text goes here",
-    image: { src: "src/assets/Logo_Full.png", alt: "hi" },
+    image: { src: "/George.png", alt: "hi" },
   },
   {
     date: "Aug 20, 2024",
@@ -20,7 +20,7 @@ export const newsTimelineItems = [
     href: "https://instagram.com",
     target: "_blank",
     ariaLabel: "Open insta",
-    image: { src: "src/assets/Logo_Full.png", alt: "hi" },
+    image: { src: "/George.png", alt: "hi" },
   },
 ]
 
