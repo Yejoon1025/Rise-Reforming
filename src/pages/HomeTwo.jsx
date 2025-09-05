@@ -41,7 +41,7 @@ export function HomeTwo() {
           normY={0.6}
           size={12}
           color="#3ca6a6"
-          text="Rise Reforming repurposes industrial plastic waste into dimethyl ether (DME), an in-demand and versatile chemical"
+          text="Rise Reforming repurposes biogas (RNG) waste into dimethyl ether (DME), an in-demand and versatile chemical"
           boxWidth={320}
           dotId="gd-3"
           defaultSide="left"

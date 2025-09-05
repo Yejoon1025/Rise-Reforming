@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
+import logo from "../assets/Logo_Transparent.png"
 
 export default function Navbar() {
   const [isNearTop, setIsNearTop] = useState(false)
@@ -18,7 +19,7 @@ export default function Navbar() {
       {/* Logo */}
       <div className="flex items-center">
         <img
-          src="src/assets/Logo_Transparent.png"
+          src={logo}
           alt="Logo"
           className="h-14 w-auto"
         />

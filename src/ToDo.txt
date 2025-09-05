@@ -1,22 +1,17 @@
-1. Edit the Text / Content
-2. Edit the images - Image and video doesn't work because of the aspect ratio?
-    a. //Regenerate Images Done.
-    b. //BioGas Version
-    c. Colour Correction
-    c. AI Mark get rid
+1. Edit / Add Content
+2. Edit the images: Colour, AI Mark, Upscale
 3. Website
-    a. Finish Team Page
+    a. Finish Team Page - Move to Bottom, Reverse, Adjustment / Stacking, First arrow goes to far, Tap to flip
     b. Fix transition for home page | Delete pages after? | To tech button after
     Small Fixes: Make landing page load only once, Create a footer, Glowdot jump
     FAQ and Contact?
-    Go through asking for suggestions
+    Go through asking for suggestions from GPT
 
 
+Bugs
+
+Meeting: Confirm Photos and Content, Biogas Words
 Timeline: Finish basic version (NOW), Finish Content Version, Finish Mobile, Analytics / SEO?
 
-Explain how to change
 
-
-Core func and pics
-
-Pictures and Bugs and Content.
+Help out tomorrow?
