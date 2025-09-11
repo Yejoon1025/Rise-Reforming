@@ -33,8 +33,8 @@ export default function Navbar() {
           }`}
       >
         <li className="justify-self-center">
-          <Link to="/about" className="hover:no-underline focus:no-underline active:no-underline">
-            About
+          <Link to="/home" className="hover:no-underline focus:no-underline active:no-underline">
+            Home
           </Link>
         </li>
         <li className="justify-self-center">

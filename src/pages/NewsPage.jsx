@@ -1,5 +1,5 @@
 import { useRef } from "react"
-import bg from "../assets/unedited/News.png"
+import bg from "../assets/backgrounds/News.png"
 import { TimeLine } from "../components/Timeline"
 import Navbar from "../components/Navbar"
 import { newsTimelineItems } from "../data/NewsItems"

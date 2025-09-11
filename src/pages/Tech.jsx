@@ -1,5 +1,5 @@
 import { useRef } from "react"
-import bg from "../assets/unedited/Tech.png"
+import bg from "../assets/backgrounds/H3.png"
 import { GlowDotProvider } from "../components/GlowDotProvider"
 import { PinnedGlowDot } from "../components/PinnedGlowDot"
 import Navbar from "../components/Navbar"

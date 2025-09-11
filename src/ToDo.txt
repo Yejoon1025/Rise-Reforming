@@ -1,17 +1,56 @@
-1. Edit / Add Content
-2. Edit the images: Colour, AI Mark, Upscale
-3. Website
-    a. Finish Team Page - Move to Bottom, Reverse, Adjustment / Stacking, First arrow goes to far, Tap to flip
-    b. Fix transition for home page | Delete pages after? | To tech button after
-    Small Fixes: Make landing page load only once, Create a footer, Glowdot jump
-    FAQ and Contact?
-    Go through asking for suggestions from GPT
+1. Fix transition for home
+2. To Tech button, X to go away, instructions for glowdots, Number glowdots, Change to HOME page
+3. Delete useless pages
+4. Landing page load only once - suspense
+5. Footer with Contact
+6. Glowdot Jump
+7. Ask suggestions from GPT
+8. Publish
+9. Mobile Version
+10. SEO Optimization
+11. Make words editable?
+
+1. Finish the images: Colour, AI Mark, Upscale
+2. Make the glows fade in
+3. Edit dots to fit
+
+1. Add Content to Website
+
+- Any help for next stage?
+- Couldn't perfect transparent logo
 
 
-Bugs
+Text:
+Page 1
+Annually - get rid of that. ex. Methanol.
+Biogas is produced... In Farms
+Biogas is NOT RNG -> 
 
-Meeting: Confirm Photos and Content, Biogas Words
-Timeline: Finish basic version (NOW), Finish Content Version, Finish Mobile, Analytics / SEO?
+Page 2:
+Disposal Costs: For farmers that flare or electricity generations
+If sold to us instead of generating, double margin.
+DME is 
+Aerosol companies call DME the Rolls Royce of aerosol propellants, perfect for products like air freshners, hairspray, and more
+DME is a low carbon additive to propane, alternative low carbon fuel similar ethanol and gasoline
+DME can be blended with propane.. to create a low carbon alt fuel similar to ethanol and gasoline
+
+Page 3:
+Just get rid of the plastic part. | KEep for now?
+2.93 kg.. c02 eq
+Updated number per year!
+At full scale xx per year. get rid of tonnes
+Remove the other one
+
+Tech Page:
+Tech: Remove the plastic one, TExtbox awkward
+Get rid of whatsoever -> Produces a low carbon chemical
+Produces low-carbon chemicals usually from fossil fuels
+never seen before -> Rare instance in the clean-tech.
 
 
-Help out tomorrow?
+
+Very original! website!
+So cool I love it!
+I love the Background
+SO good!!
+IM very happy!?

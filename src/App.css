@@ -72,3 +72,7 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-splash-exit { animation-duration: 200ms; }
 }
+
+.card-settling {
+  transition: transform 120ms ease-out !important;
+}

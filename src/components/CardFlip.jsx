@@ -1,132 +1,144 @@
 // src/components/CardFlip.jsx
-// -----------------------------------------------------------------------------
-// CardFlip — Horizontal, scrollable "stack of cards" that flip in place.
-// - Cards slide horizontally while a sticky timeline + focus dot stay fixed.
-// - Only the card nearest the focus axis (“dot”) is interactable & flips.
-// - Progress line lights up to the LEFT of the dot.
-// - First and last timeline segments are clamped to the centers of the first
-//   and last cards respectively (no extra line before/after).
-// - Keyboard:
-//     • ← / PageUp  : previous card
-//     • → / PageDown: next card
-//     • Enter/Space : flip focused card (front/back)
-// - Accessibility: list semantics, button role on the flip surface.
-//
-// Layout overview
-// -----------------------------------------------------------------------------
-// <section> (relative)
-//   ├─ Sticky overlay (timeline + dot)
-//   └─ Horizontal scroller (cards)
-//       ├─ start spacer (so first card can align to dot axis)
-//       ├─ <article>… (one per item)
-//       └─ end spacer (so last card can align to dot axis)
-//
-// Sizing
-// -----------------------------------------------------------------------------
-// - Cards keep 5:7 (W:H=5:7) ratio
-// - computedCardW/H: responsive width/height based on viewport
-// - articleW: the column width each card occupies; overlapPx reduces articleW,
-//   giving the “fanned” overlap between columns.
-//
-// Notes
-// -----------------------------------------------------------------------------
-// - The focus axis X (dotLeft) is computed from anchorXRatio, clamped to left half.
-// - startPad / endPad pad the scroller so first/last card centers can sit on the axis.
-// - scrollPaddingRight ensures the last card can reach the dot (prevents snap-back).
-// - Hysteresis smooths active card changes; Soft Zone controls when a card is
-//   treated as “in focus” (scales, brightens, clickable).
-// -----------------------------------------------------------------------------
-
 import { useEffect, useRef, useState, useLayoutEffect } from "react"
+import { ChevronLeft, ChevronRight, RotateCw, Linkedin, Mail } from "lucide-react"
 
 export function CardFlip({
-  items = [],                 // [{ id, name, title, photo:{src,alt}, description, linkedin?, email? }]
-  color = "#3ca6a6",          // focus dot color (and default progressColor)
-  progressColor,              // optional override for progress line color
-  dotSize = 12,               // px
-  cardWidth = 320,            // preferred playing-card width (height = width * 7/5)
-  overlapPx = 64,             // horizontal overlap between adjacent articles (columns)
-  anchorXRatio = 0.28,        // focus-axis X as a ratio of viewport width (clamped to left half)
-  anchorYRatio = 1 / 3,       // focus-axis Y as a ratio of viewport height (from bottom)
+  items = [],
+  color = "#3ca6a6",
+  progressColor,
+  dotSize = 12,
+  cardWidth = 320,
+  overlapPx = 64,
+  anchorXRatio = 0.28,
+  anchorYRatio = 1 / 3,
   className = "",
+  reversed = false, // mirror horizontally
 }) {
-  // Refs to DOM nodes
+  // refs & layout
   const sectionRef = useRef(null)
   const scrollerRef = useRef(null)
-  const panelsRef = useRef([]) // <article> refs by index
+  const panelsRef = useRef([])
 
-  // Active state (index of card nearest the focus axis)
+  // order & active
+  const [order, setOrder] = useState(items.map((_, i) => i))
+  const displayItems = order.map(i => items[i])
   const [active, setActive] = useState(0)
 
-  // Card + column sizing (responsive)
+  // card sizing & paddings
   const [computedCardW, setComputedCardW] = useState(cardWidth)
   const [computedCardH, setComputedCardH] = useState(Math.round(cardWidth * CARD_RATIO))
   const [articleW, setArticleW] = useState(Math.max(220, cardWidth - overlapPx))
-
-  // Horizontal spacers so the first/last card centers can sit on the focus axis
   const [startPad, setStartPad] = useState(0)
   const [endPad, setEndPad] = useState(0)
+  const [isCrowded, setIsCrowded] = useState(false)
 
-  // Per-card flip state (only the focused card responds)
-  const [flipped, setFlipped] = useState({})   // { [key]: boolean }
+  // flip state
+  const [flipped, setFlipped] = useState({})
 
-  // Focus dot position (in px)
+  // timeline geometry (DOM-space)
   const [dotLeft, setDotLeft] = useState(0)
   const [dotBottom, setDotBottom] = useState(0)
   const [dotTop, setDotTop] = useState(0)
-
-  // Timeline geometry (visible baseline and progress left-of-dot)
   const [lineLeft, setLineLeft] = useState(0)
   const [lineWidth, setLineWidth] = useState(0)
   const [progressLeftW, setProgressLeftW] = useState(0)
 
-  // Internal control flags & timers
+  // sweep state
   const isAutoScrollingRef = useRef(false)
   const scrollIdleTimerRef = useRef(null)
+  const inactivityTimerRef = useRef(null)
+  const sweepTO2 = useRef(null)
+  const [isSweeping, setIsSweeping] = useState(false)
+  const [sweepPhase, setSweepPhase] = useState("idle") // idle | up
+  const [sweepKeys, setSweepKeys] = useState([])
+  const [sweepY, setSweepY] = useState(240)
+
+  // freeze appearance of non-moving cards during sweep
+  const frozenInZoneRef = useRef(new Map())
+
+  // wheel/touch → discrete nav
+  const WHEEL_COOLDOWN_MS = 320
+  const wheelCooldownRef = useRef(false)
+  const touchStartXRef = useRef(0)
+  const touchDeltaXRef = useRef(0)
+  const touchActiveRef = useRef(false)
+  const SWIPE_THRESHOLD = 36
+
   const didInitRef = useRef(false)
+  const [isIntersecting, setIsIntersecting] = useState(false)
 
-  // Tunables
-  const HYSTERESIS_RATIO = 0.22     // more = stickier active card changes
-  const SOFT_ZONE_RATIO = 0.28      // more = wider “focused” zone
+  // Hints (dismiss after first use)
+  const [dismissedLeftHint, setDismissedLeftHint] = useState(false)
+  const [dismissedRightHint, setDismissedRightHint] = useState(false)
+  const [dismissedFlipHint, setDismissedFlipHint] = useState(false)
+  const GOLD = "#f8da9c"
+
+  // tunables
+  const HYSTERESIS_RATIO = 0.22
+  const SOFT_ZONE_RATIO = 0.01
   const progColor = progressColor || color
-  const GAP_PX = 16                 // gap between dot axis and card/name stacks
-  const FOCUS_SCALE = 1.14          // scale for focused card
-  const UNFOCUS_SCALE = 0.9         // scale for non-focused cards
-  const ICONS_HB = 40               // icon bar vertical offset into the textbox
-  const keyFor = (i, it) => it.id ?? i
+  const GAP_PX = 16
+  const FOCUS_SCALE = 1.14
+  const UNFOCUS_SCALE = 0.9
+  const ICONS_HB = 40
+  const IDLE_MS = 1500
+  const SWEEP_UP_MS = 360
+  const FADE_MS = 160
+  const GROW_MS = 360
+  const keyFor = (originalIndex, it) => it.id ?? originalIndex
 
-  // ---------------------------------------------------------------------------
-  // Preload all photos to reduce on-demand loading flickers
-  // ---------------------------------------------------------------------------
+  // timeline visibility & grow flags
+  const [showLeftTimeline, setShowLeftTimeline] = useState(true)
+  const [animateRightGrow, setAnimateRightGrow] = useState(false)
+
+  // keep order in sync with items
   useEffect(() => {
-    const links = []
-    items.forEach(it => {
-      const src = it.photo?.src
-      if (!src) return
-      const link = document.createElement("link")
-      link.rel = "preload"
-      link.as = "image"
-      link.href = src
-      document.head.appendChild(link)
-      links.push(link)
-    })
-    return () => links.forEach(l => l.parentNode?.removeChild(l))
-  }, [items])
+    setOrder(prev => (prev.length === items.length ? prev : items.map((_, i) => i)))
+  }, [items.length])
 
-  // ---------------------------------------------------------------------------
-  // Ensure we start scrolled fully left before first paint to avoid misalignment
-  // ---------------------------------------------------------------------------
+  // initial scroll pos
   useLayoutEffect(() => {
     const scroller = scrollerRef.current
     if (scroller) scroller.scrollLeft = 0
   }, [])
 
-  // ---------------------------------------------------------------------------
-  // Core layout pass: compute dot position, card sizes, spacers, timeline geometry.
-  // Runs on scroll & resize. Also does active-card selection with hysteresis.
-  // ---------------------------------------------------------------------------
+  // Observer to activate/deactivate controls when in/out of view
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsIntersecting(entry.isIntersecting),
+      { threshold: 0.1 } // Fire when 10% of the component is visible
+    )
+
+    const currentSection = sectionRef.current
+    if (currentSection) observer.observe(currentSection)
+
+    return () => {
+      if (currentSection) observer.unobserve(currentSection)
+    }
+  }, [])
+
+  // Horizontal Bounce
+  useEffect(() => {
+    if (document.getElementById("cardflip-hints-kf")) return
+    const el = document.createElement("style")
+    el.id = "cardflip-hints-kf"
+    el.textContent = `
+@keyframes cardflip-nudge-x {
+  0%, 100% { transform: translateX(0) }
+  50%      { transform: translateX(var(--nudge-amp, 5px)) }
+}`
+    document.head.appendChild(el)
+  }, [])
+
+  // helper: screen-space anchor (post-mirror)
+  function getAnchorXScreen() {
+    const vw = window.innerWidth || 0
+    return reversed ? vw - dotLeft : dotLeft
+  }
+
+  // compute layout & timeline metrics
   useLayoutEffect(() => {
-    function onScrollOrResize() {
+    function computeLayout() {
       const scroller = scrollerRef.current
       if (!scroller) return
 
@@ -134,29 +146,60 @@ export function CardFlip({
       const vh = window.innerHeight || 0
       if (!vw || !vh) return
 
-      // --- Focus axis (dot) position from ratios (clamped) ---
-      const leftPx = Math.round(vw * clamp(anchorXRatio, 0.05, 0.5)) // keep on left half
+      const leftPx = Math.round(vw * clamp(anchorXRatio, 0.05, 0.5)) // DOM-space anchor
       const bottomPx = Math.round(vh * clamp(anchorYRatio, 0.15, 0.85))
       const topPx = vh - bottomPx
       setDotLeft(leftPx)
       setDotBottom(bottomPx)
       setDotTop(topPx)
 
-      // --- Card sizing (5:7) + article (column) width ---
       const cw = computeCardWidth(vw, cardWidth)
       const ch = Math.round(cw * CARD_RATIO)
-      const aw = Math.max(220, cw - overlapPx)
       setComputedCardW(cw)
       setComputedCardH(ch)
+
+      // --- DYNAMIC SPACING CALCULATION ---
+      let finalArticleW
+      const N = items.length
+
+      if (N > 1) {
+        // Calculate the default spacing, respecting the original 220px minimum.
+        const defaultArticleW = cw - overlapPx
+        const clampedDefaultArticleW = Math.max(220, defaultArticleW)
+
+        // Check if the default layout fits. The total width depends on the anchor point (`leftPx`)
+        // and the span of all cards. We want the right edge of the last card to be inside the viewport.
+        const SCREEN_EDGE_BUFFER = 48 // A comfortable buffer from the viewport edge
+        const defaultTotalWidth = leftPx + (N - 1) * clampedDefaultArticleW + cw / 2
+
+        if (defaultTotalWidth > vw - SCREEN_EDGE_BUFFER) {
+          // It overflows. Calculate the precise articleW needed to fit.
+          // Formula derived from: leftPx + (N - 1) * aw + cw / 2 = vw - SCREEN_EDGE_BUFFER
+          const requiredArticleW = (vw - SCREEN_EDGE_BUFFER - leftPx - cw / 2) / (N - 1)
+
+          // Allow cards to become very close to ensure they fit, removing the minimum clamp.
+          finalArticleW = requiredArticleW
+        } else {
+          // It fits. Use the default clamped spacing.
+          finalArticleW = clampedDefaultArticleW
+        }
+      } else {
+        // For 0 or 1 card, just use the default spacing logic.
+        finalArticleW = Math.max(220, cw - overlapPx)
+      }
+
+      const aw = Math.round(finalArticleW)
       setArticleW(aw)
 
-      // --- Scroller spacers so first/last centers can align to the dot axis ---
+      const CROWDED_THRESHOLD_PX = 160 // Spacing below which text is hidden
+      setIsCrowded(aw < CROWDED_THRESHOLD_PX)
+      // --- END DYNAMIC SPACING CALCULATION ---
+
       setStartPad(Math.max(0, leftPx - aw / 2))
       setEndPad(Math.max(0, Math.ceil((vw - leftPx) - aw / 2) + 4))
 
-      // --- Timeline: clamp to first/last card centers in viewport coords ---
       const firstEl = panelsRef.current[0]
-      const lastEl = panelsRef.current[items.length - 1]
+      const lastEl = panelsRef.current[displayItems.length - 1]
       const s = scroller.scrollLeft
 
       let firstCenter = leftPx
@@ -164,107 +207,166 @@ export function CardFlip({
       if (firstEl) firstCenter = firstEl.offsetLeft + firstEl.clientWidth / 2
       if (lastEl) lastCenter = lastEl.offsetLeft + lastEl.clientWidth / 2
 
-      // Project first/last centers into viewport X by subtracting scrollLeft
       const startX = firstCenter - s
       const endX = lastCenter - s
-
-      // Clamp visible baseline to viewport
       const visibleLeft = clamp(startX, 0, vw)
       const visibleRight = clamp(endX, 0, vw)
       setLineLeft(visibleLeft)
       setLineWidth(Math.max(0, visibleRight - visibleLeft))
 
-      // --- Progress lights up to the LEFT of the dot ---
-      // Compute total range between first/last center in scroller coords,
-      // then light proportionally to scrollLeft.
-      const range = Math.max(0, lastCenter - firstCenter)
-      const lit = clamp(s, 0, range)
+      const totalRange = Math.max(0, lastCenter - firstCenter)
+      const lit = clamp(s, 0, totalRange)
       setProgressLeftW(lit)
 
-      // --- Initial alignment on very first pass ---
       if (!didInitRef.current && firstEl) {
         didInitRef.current = true
-        scroller.scrollLeft = 0 // aligns first card center with dot axis (via startPad)
+        scroller.scrollLeft = 0
         setActive(0)
-        // Run a second pass after programmatic scroll so geometry is current
-        requestAnimationFrame(onScrollOrResize)
+        requestAnimationFrame(computeLayout)
       }
 
-      // --- Debounced active-card selection using hysteresis ---
       if (scrollIdleTimerRef.current) clearTimeout(scrollIdleTimerRef.current)
       scrollIdleTimerRef.current = setTimeout(() => {
         isAutoScrollingRef.current = false
-        const nearest = getNearestByAnchor(panelsRef.current, leftPx)
-        maybeSetActive(nearest, leftPx)
+        const anchorXScreen = getAnchorXScreen()
+        const nearest = getNearestByAnchor(panelsRef.current, anchorXScreen)
+        maybeSetActive(nearest, anchorXScreen)
       }, 80)
+
+      setSweepY(Math.max(120, Math.round(vh * 0.44)))
     }
 
-    onScrollOrResize()
+    const onScroll = () => {
+      computeLayout()
+      if (!isAutoScrollingRef.current) resetInactivityTimer()
+    }
+
     const scroller = scrollerRef.current
-    scroller?.addEventListener("scroll", onScrollOrResize, { passive: true })
-    window.addEventListener("resize", onScrollOrResize)
-    window.addEventListener("orientationchange", onScrollOrResize)
+    computeLayout()
+    scroller?.addEventListener("scroll", onScroll, { passive: true })
+    window.addEventListener("resize", computeLayout)
+    window.addEventListener("orientationchange", computeLayout)
     return () => {
-      scroller?.removeEventListener("scroll", onScrollOrResize)
-      window.removeEventListener("resize", onScrollOrResize)
-      window.removeEventListener("orientationchange", onScrollOrResize)
+      scroller?.removeEventListener("scroll", onScroll)
+      window.removeEventListener("resize", computeLayout)
+      window.removeEventListener("orientationchange", computeLayout)
       if (scrollIdleTimerRef.current) clearTimeout(scrollIdleTimerRef.current)
     }
-  }, [cardWidth, overlapPx, anchorXRatio, anchorYRatio, items.length])
+  }, [cardWidth, overlapPx, anchorXRatio, anchorYRatio, items.length, reversed])
 
-  // ---------------------------------------------------------------------------
-  // Global keyboard controls (only if section is on-screen)
-  // ---------------------------------------------------------------------------
+  // start/cleanup timers
   useEffect(() => {
+    resetInactivityTimer()
+    return () => {
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current)
+      if (sweepTO2.current) clearTimeout(sweepTO2.current)
+    }
+  }, [])
+
+  // keyboard nav (⇦/⇨ reversed when mirrored)
+  useEffect(() => {
+    if (!isIntersecting) return // Only listen for keys when component is visible
+
+    const dirFactor = reversed ? -1 : 1
     const onKey = e => {
-      const k = e.key
-      const rect = sectionRef.current?.getBoundingClientRect()
-      const inViewport = rect && rect.left < window.innerWidth && rect.right > 0
-      if (!inViewport) return
+      if (isSweeping) return
 
-      // Navigation
-      if (k === "ArrowRight" || k === "PageDown" || k === "ArrowLeft" || k === "PageUp") {
+      if (e.key === "ArrowRight" || e.key === "PageDown") {
+        e.preventDefault(); resetInactivityTimer(); go(+1 * dirFactor)
+      } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
+        e.preventDefault(); resetInactivityTimer(); go(-1 * dirFactor)
+      } else if (e.key === "Enter" || e.key === " ") {
+        const it = displayItems[active]; if (!it) return
         e.preventDefault()
-        if (isAutoScrollingRef.current) return
-        return go(k === "ArrowLeft" || k === "PageUp" ? -1 : 1)
-      }
-
-      // Flip current (only affects focused card)
-      if (k === "Enter" || k === " ") {
-        const idx = active
-        const it = items[idx]
-        if (!it) return
-        e.preventDefault()
-        const key = keyFor(idx, it)
+        const key = keyFor(order[active], it)
         setFlipped(s => ({ ...s, [key]: !s[key] }))
       }
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [items.length, active])
+  }, [active, displayItems, order, isSweeping, reversed, isIntersecting])
 
-  // ---------------------------------------------------------------------------
-  // Navigation helpers
-  // ---------------------------------------------------------------------------
+  // wheel/touch → discrete steps (directions reversed when mirrored)
+  useEffect(() => {
+    const scroller = scrollerRef.current
+    if (!scroller || !isIntersecting) return // Only add listeners when visible
+
+    const dirFactor = reversed ? -1 : 1
+
+    const onWheel = e => {
+      if (isSweeping) return
+      e.preventDefault()
+      if (isAutoScrollingRef.current || wheelCooldownRef.current) return
+      const magnitude = Math.abs(e.deltaX) + Math.abs(e.deltaY)
+      if (magnitude < 2) return
+      const dir = ((e.deltaX || e.deltaY) > 0 ? +1 : -1) * dirFactor
+      wheelCooldownRef.current = true
+      resetInactivityTimer()
+      go(dir)
+      setTimeout(() => (wheelCooldownRef.current = false), WHEEL_COOLDOWN_MS)
+    }
+
+    const onTouchStart = e => {
+      if (isSweeping || e.touches.length !== 1) return
+      touchActiveRef.current = true
+      touchStartXRef.current = e.touches[0].clientX
+      touchDeltaXRef.current = 0
+    }
+    const onTouchMove = e => {
+      if (!touchActiveRef.current) return
+      e.preventDefault()
+      const x = e.touches[0].clientX
+      touchDeltaXRef.current = x - touchStartXRef.current
+    }
+    const onTouchEnd = () => {
+      if (!touchActiveRef.current) return
+      touchActiveRef.current = false
+      const dx = touchDeltaXRef.current
+      if (Math.abs(dx) > SWIPE_THRESHOLD) {
+        const dir = (dx < 0 ? +1 : -1) * dirFactor
+        resetInactivityTimer(); go(dir)
+      } else snapToNearest()
+    }
+
+    scroller.addEventListener("wheel", onWheel, { passive: false })
+    scroller.addEventListener("touchstart", onTouchStart, { passive: true })
+    scroller.addEventListener("touchmove", onTouchMove, { passive: false })
+    scroller.addEventListener("touchend", onTouchEnd, { passive: true })
+    return () => {
+      scroller.removeEventListener("wheel", onWheel)
+      scroller.removeEventListener("touchstart", onTouchStart)
+      scroller.removeEventListener("touchmove", onTouchMove)
+      scroller.removeEventListener("touchend", onTouchEnd)
+    }
+  }, [isSweeping, dotLeft, reversed, isIntersecting])
+
+  // navigation helpers (use screen-space anchor for rect comparisons)
   function go(delta) {
-    // Pick the true nearest in case active is slightly behind
-    const current = getNearestByAnchor(panelsRef.current, dotLeft)
-    const next = clamp(current + delta, 0, items.length - 1)
+    const current = getNearestByAnchor(panelsRef.current, getAnchorXScreen())
+    const next = clamp(current + delta, 0, displayItems.length - 1)
     if (next === current) return
+
+    const movedIndexRight = next > current
+    const movedVisualRight = reversed ? !movedIndexRight : movedIndexRight
+    if (movedVisualRight) setDismissedRightHint(true)
+    else setDismissedLeftHint(true)
+
     goToIndex(next)
   }
 
+  function snapToNearest() {
+    if (isSweeping) return
+    const idx = getNearestByAnchor(panelsRef.current, getAnchorXScreen())
+    goToIndex(idx)
+  }
   function goToIndex(index) {
     const scroller = scrollerRef.current
     const el = panelsRef.current[index]
     if (!scroller || !el) return
-
-    // Align the article center to the focus axis (dotLeft)
+    // Scroll math remains in DOM space (pre-transform)
     const target = el.offsetLeft + el.clientWidth / 2 - dotLeft
     isAutoScrollingRef.current = true
     scroller.scrollTo({ left: target, behavior: "smooth" })
-
-    // Snap active after the smooth scroll finishes
     if (scrollIdleTimerRef.current) clearTimeout(scrollIdleTimerRef.current)
     scrollIdleTimerRef.current = setTimeout(() => {
       isAutoScrollingRef.current = false
@@ -272,206 +374,337 @@ export function CardFlip({
     }, 420)
   }
 
-  // Hysteresis: only accept a new active if it’s sufficiently closer than the current
-  function maybeSetActive(proposedIdx, anchorX) {
+  // active selection
+  function maybeSetActive(proposedIdx, anchorXScreen) {
     const currentEl = panelsRef.current[active]
     const proposedEl = panelsRef.current[proposedIdx]
     if (!proposedEl) return setActive(proposedIdx)
-
-    const dProposed = Math.abs(elCenterToAnchor(proposedEl, anchorX))
-    const dCurrent = currentEl ? Math.abs(elCenterToAnchor(currentEl, anchorX)) : Infinity
+    const dP = Math.abs(elCenterToAnchor(proposedEl, anchorXScreen))
+    const dC = currentEl ? Math.abs(elCenterToAnchor(currentEl, anchorXScreen)) : Infinity
     const hysteresisPx = (window.innerWidth / 2) * HYSTERESIS_RATIO
-    if (dProposed + hysteresisPx < dCurrent) setActive(proposedIdx)
+    if (dP + hysteresisPx < dC) setActive(proposedIdx)
   }
-
-  // Soft focus zone controls card emphasis/opacity/clickability
   function isInSoftZone(i) {
     const el = panelsRef.current[i]
     if (!el) return i === active
-    return Math.abs(elCenterToAnchor(el, dotLeft)) <= (window.innerWidth / 2) * SOFT_ZONE_RATIO
+    return Math.abs(elCenterToAnchor(el, getAnchorXScreen())) <= (window.innerWidth / 2) * SOFT_ZONE_RATIO
   }
 
-  // ---------------------------------------------------------------------------
-  // Flip handling: clicking a non-focused card recenters first; focused flips.
-  // ---------------------------------------------------------------------------
-  function onCardClick(i, it, inZone) {
-    if (!inZone) {
-      goToIndex(i)
-      return
+  // click/flip
+  function onCardClick(displayIndex, it, inZone) {
+    if (isSweeping) return
+    if (!inZone) { goToIndex(displayIndex); resetInactivityTimer(); return }
+
+    const key = keyFor(order[displayIndex], it)
+    const nextFlip = !flipped[key]
+    if (nextFlip && !dismissedFlipHint) setDismissedFlipHint(true)  // first successful flip
+    setFlipped(s => ({ ...s, [key]: nextFlip }))
+  }
+
+
+  // idle sweep
+  function resetInactivityTimer() {
+    if (isSweeping) return
+    if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current)
+    inactivityTimerRef.current = setTimeout(onIdleSweep, IDLE_MS)
+  }
+  function onIdleSweep() {
+    if (isSweeping) return
+    const els = panelsRef.current
+    if (!els || !els.length) { resetInactivityTimer(); return }
+
+    const anchorXScreen = getAnchorXScreen()
+
+    const movingDisplayIdx = []
+    const keepDisplayIdx = []
+    els.forEach((el, di) => {
+      if (!el) return
+      const d = elCenterToAnchor(el, anchorXScreen)
+      const isMoving = reversed ? d > 2 : d < -2   // RIGHT of dot when reversed, LEFT when normal
+      if (isMoving) movingDisplayIdx.push(di)
+      else keepDisplayIdx.push(di)
+    })
+    if (!movingDisplayIdx.length) { resetInactivityTimer(); return }
+
+    // hide DOM-left during sweep (mirroring handles visual side)
+    setShowLeftTimeline(false)
+
+    const movingOriginalIdx = movingDisplayIdx.map(di => order[di])
+    const movingKeys = movingOriginalIdx.map(oi => keyFor(oi, items[oi]))
+    setSweepKeys(movingKeys)
+
+    const frozen = new Map()
+    displayItems.forEach((it, di) => {
+      const oi = order[di]
+      const k = keyFor(oi, items[oi])
+      frozen.set(k, isInSoftZone(di))
+    })
+    frozenInZoneRef.current = frozen
+
+    setIsSweeping(true)
+    setSweepPhase("up")
+
+    // choose anchor: boundary card that remains (first kept on right in normal; last kept on left in reversed)
+    let anchorDisplayIdx = null
+    if (keepDisplayIdx.length) {
+      anchorDisplayIdx = reversed ? Math.max(...keepDisplayIdx) : Math.min(...keepDisplayIdx)
     }
-    const key = keyFor(i, it)
-    setFlipped(s => ({ ...s, [key]: !s[key] }))
+
+    if (sweepTO2.current) clearTimeout(sweepTO2.current)
+    sweepTO2.current = setTimeout(() => {
+      const scroller = scrollerRef.current
+      if (!scroller) return
+
+      let anchorOriginalIdx = null
+      let beforeCenterX = null
+      if (anchorDisplayIdx != null) {
+        anchorOriginalIdx = order[anchorDisplayIdx]
+        const anchorEl = panelsRef.current[anchorDisplayIdx]
+        if (anchorEl) {
+          const r = anchorEl.getBoundingClientRect()
+          beforeCenterX = r.left + r.width / 2
+        }
+      }
+
+      const keepOriginalIdx = order.filter((oi, di) => !movingDisplayIdx.includes(di))
+      const newOrder = [...keepOriginalIdx, ...movingOriginalIdx]
+      setOrder(newOrder)
+
+      requestAnimationFrame(() => {
+        if (anchorOriginalIdx != null && beforeCenterX != null) {
+          // Always animate DOM-right; mirror makes it visual-left when reversed
+          setAnimateRightGrow(true)
+
+          const newDisplayIdx = newOrder.indexOf(anchorOriginalIdx)
+          const newAnchorEl = panelsRef.current[newDisplayIdx]
+          if (newAnchorEl) {
+            const r2 = newAnchorEl.getBoundingClientRect()
+            const afterCenterX = r2.left + r2.width / 2
+            const scrollAdjust = afterCenterX - beforeCenterX
+            scroller.scrollLeft += reversed ? -scrollAdjust : scrollAdjust
+          }
+        }
+
+        setSweepKeys([])
+        setSweepPhase("idle")
+        setIsSweeping(false)
+        frozenInZoneRef.current.clear()
+
+        const nearest = getNearestByAnchor(panelsRef.current, getAnchorXScreen())
+        setActive(nearest)
+
+        setTimeout(() => setShowLeftTimeline(true), 120)
+        setTimeout(() => setAnimateRightGrow(false), GROW_MS + 40)
+
+        resetInactivityTimer()
+      })
+    }, SWEEP_UP_MS + 60)
   }
 
-  // Visible progress should not exceed visible baseline left-of-dot
+  // progress + baseline segments (DOM-space; visuals are mirrored by CSS)
   const visibleProgressLeft = Math.max(0, dotLeft - progressLeftW)
   const visibleProgressWidth = Math.max(0, Math.min(progressLeftW, dotLeft - lineLeft))
+  const baselineStart = lineLeft
+  const baselineEnd = lineLeft + lineWidth
+  const leftBaselineLeft = baselineStart
+  const leftBaselineWidth = Math.max(0, Math.min(dotLeft, baselineEnd) - baselineStart)
+  const rightBaselineLeft = Math.max(dotLeft, baselineStart)
+  const rightBaselineWidth = Math.max(0, baselineEnd - rightBaselineLeft)
+
+  // DOM-side visibility during sweep
+  const showDomLeft = showLeftTimeline     // hide DOM-left while sweeping
+  const showDomRight = true                // keep DOM-right visible
 
   return (
-    <section
-      ref={sectionRef}
-      className={`relative w-full ${className}`}
-      aria-label="CardFlip Horizontal"
-    >
-      {/* --------------------------------------------------------------------
-          Sticky overlay: baseline (clamped to first/last centers) + progress + dot
-         -------------------------------------------------------------------- */}
-      <div className="pointer-events-none absolute inset-0">
+    <section ref={sectionRef} className={`relative w-full ${className}`} aria-label="CardFlip Horizontal">
+      {/* timeline overlay (mirrored visually when reversed) */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{ transform: reversed ? "scaleX(-1)" : "none", transformOrigin: "center" }}
+      >
         <div className="sticky top-0 h-screen w-full">
-          {/* Baseline */}
-          <div
-            className="absolute bg-[#374151]"
-            style={{ left: lineLeft, bottom: dotBottom, width: lineWidth, height: "1.25px" }}
-            aria-hidden
-          />
-          {/* Cyan progress — lights up to the LEFT of the dot */}
-          <div
-            className="absolute"
-            style={{
-              left: visibleProgressLeft,
-              bottom: dotBottom,
-              width: visibleProgressWidth,
-              height: "1.25px",
-              background: progColor,
-              boxShadow: `0 0 10px ${hexToRgba(progColor, 0.55)}`,
-            }}
-            aria-hidden
-          />
-          {/* Focus dot with glow */}
+          {/* right baseline */}
+          {rightBaselineWidth > 0 && (
+            <div
+              className="absolute bg-[#374151]"
+              style={{
+                left: rightBaselineLeft,
+                bottom: dotBottom,
+                width: rightBaselineWidth,
+                height: "1.25px",
+                opacity: showDomRight ? 1 : 0,
+                transition: `${animateRightGrow ? `width ${GROW_MS}ms ease-out, ` : ""}opacity ${FADE_MS}ms linear`,
+              }}
+              aria-hidden
+            />
+          )}
+          {/* left baseline */}
+          {leftBaselineWidth > 0 && (
+            <div
+              className="absolute bg-[#374151]"
+              style={{
+                left: leftBaselineLeft,
+                bottom: dotBottom,
+                width: leftBaselineWidth,
+                height: "1.25px",
+                opacity: showDomLeft ? 1 : 0,
+                transition: `opacity ${FADE_MS}ms linear`,
+              }}
+              aria-hidden
+            />
+          )}
+          {/* progress (DOM-left segment; mirror handles visuals) */}
+          {showLeftTimeline && visibleProgressWidth > 0 && (
+            <div
+              className="absolute"
+              style={{
+                left: visibleProgressLeft,
+                bottom: dotBottom,
+                width: visibleProgressWidth,
+                height: "1.25px",
+                background: progColor,
+                boxShadow: `0 0 10px ${hexToRgba(progColor, 0.55)}`,
+                opacity: showLeftTimeline ? 1 : 0,
+                transition: `opacity ${FADE_MS}ms linear`
+              }}
+              aria-hidden
+            />
+          )}
           <div
             className="absolute -translate-x-1/2 translate-y-1/2"
             style={{ left: dotLeft, bottom: dotBottom, width: dotSize, height: dotSize }}
             aria-hidden
           >
-            <div
-              className="absolute -inset-2 rounded-full blur-md opacity-70 animate-pulse pointer-events-none z-10"
-              style={{ backgroundColor: color }}
-            />
-            <div
-              className="absolute inset-0 rounded-full shadow-[0_0_6px_1px_rgba(0,0,0,0.25)] z-20"
-              style={{ backgroundColor: color }}
-            />
+            <div className="absolute -inset-2 rounded-full blur-md opacity-70 animate-pulse pointer-events-none z-10" style={{ backgroundColor: color }} />
+            <div className="absolute inset-0 rounded-full shadow-[0_0_6px_1px_rgba(0,0,0,0.25)] z-20" style={{ backgroundColor: color }} />
           </div>
         </div>
       </div>
 
-      {/* --------------------------------------------------------------------
-          Horizontal scroller (snap + custom scroll padding so last card can align)
-         -------------------------------------------------------------------- */}
+      {/* scroller (mirrored visually when reversed) */}
       <div
         ref={scrollerRef}
         role="list"
-        className="h-screen w-full overflow-x-auto overflow-y-hidden flex items-stretch"
+        className="h-screen w-full overflow-x-hidden overflow-y-hidden flex items-stretch"
         style={{
-          scrollSnapType: "x mandatory",
+          transform: reversed ? "scaleX(-1)" : "none",
+          transformOrigin: "center",
+          scrollSnapType: "none",
+          overscrollBehavior: "contain",
           scrollPaddingLeft: dotLeft,
-          // IMPORTANT: allows the last card to reach the dot instead of snapping back
           scrollPaddingRight: `calc(100vw - ${dotLeft}px)`,
+          pointerEvents: isSweeping ? "none" : "auto",
         }}
       >
-        {/* Start spacer so the first card can align to the dot axis */}
         <div className="flex-shrink-0 h-full" aria-hidden style={{ width: startPad }} />
+        {displayItems.map((it, di) => {
+          const originalIndex = order[di]
+          const key = keyFor(originalIndex, it)
 
-        {items.map((it, i) => {
-          const inZone = isInSoftZone(i)
-          const key = keyFor(i, it)
+          const inZoneRuntime = isInSoftZone(di)
+          const frozenInZone = isSweeping ? frozenInZoneRef.current.get(key) : undefined
+          const appearInZone = isSweeping ? (frozenInZone ?? inZoneRuntime) : inZoneRuntime
+
           const isFlipped = !!flipped[key]
+          const stackIndex = appearInZone ? displayItems.length + 1 : displayItems.length - di
+          const scale = appearInZone ? FOCUS_SCALE : UNFOCUS_SCALE
+          const emphasisShadow = appearInZone ? "0 28px 60px rgba(0,0,0,0.6)" : "0 10px 20px rgba(0,0,0,0.35)"
 
-          // Stack so cards to the LEFT appear ABOVE cards to the RIGHT (nicer overlap)
-          const stackIndex = items.length - i
+          const isMoving = isSweeping && sweepKeys.includes(key)
+          const isMovingNow = isMoving && sweepPhase !== "idle"
 
-          // Emphasis styles based on focus
-          const scale = inZone ? FOCUS_SCALE : UNFOCUS_SCALE
-          const emphasisShadow = inZone
-            ? "0 28px 60px rgba(0,0,0,0.6)"
-            : "0 10px 20px rgba(0,0,0,0.35)"
+          let sweepTransform = "translate3d(0,0,0)"
+          let sweepOpacity = 1
+          let sweepTransition = `transform ${SWEEP_UP_MS}ms ease-out, opacity ${FADE_MS}ms ease-out`
+          if (isMoving && sweepPhase === "up") {
+            sweepTransform = `translate3d(0, ${-sweepY}px, 0)`
+            sweepOpacity = 0.02
+          }
 
           return (
             <article
               key={key}
-              ref={el => (panelsRef.current[i] = el)}
+              ref={el => (panelsRef.current[di] = el)}
               role="listitem"
-              className="shrink-0 h-full relative snap-start"
-              // scrollMarginLeft helps ensure centering math feels natural
-              style={{ width: articleW, zIndex: stackIndex, scrollMarginLeft: articleW / 2 }}
+              className="shrink-0 h-full relative"
+              style={{ width: articleW, zIndex: stackIndex }}
             >
-              {/* ----------------------- Card stack (aligned to dot axis) ----------------------- */}
+              {/* card (un-mirror the content so text/images look normal) */}
               <div
-                className="absolute -translate-x-1/2"
-                style={{ left: "50%", bottom: dotBottom + GAP_PX }}
+                className="absolute -translate-x-1/2 will-change-transform"
+                style={{
+                  left: "50%",
+                  bottom: dotBottom + GAP_PX,
+                  transform: sweepTransform + (reversed ? " scaleX(-1)" : ""),
+                  opacity: sweepOpacity,
+                  transition: sweepTransition,
+                }}
               >
                 <div
                   role="button"
                   tabIndex={0}
-                  aria-pressed={isFlipped && inZone}
-                  onClick={() => onCardClick(i, it, inZone)}
-                  onKeyDown={e => (e.key === "Enter" || e.key === " ") && onCardClick(i, it, inZone)}
-                  className={`rounded-2xl overflow-hidden select-none ${inZone ? "cursor-pointer" : "cursor-default"}`}
+                  aria-pressed={isFlipped && appearInZone}
+                  onClick={() => onCardClick(di, it, appearInZone)}
+                  onKeyDown={e => (e.key === "Enter" || e.key === " ") && onCardClick(di, it, appearInZone)}
+                  className={`group relative rounded-2xl overflow-hidden select-none ${appearInZone ? "cursor-pointer" : "cursor-default"}`}
                   style={{
                     width: computedCardW,
                     height: computedCardH,
-                    perspective: "1200px", // for 3D flip
+                    perspective: "1200px",
+                    backgroundColor: "transparent",
+                    contain: "paint"
                   }}
                 >
-                  {/* Emphasis wrapper (scale & shadow). No hover tilt to keep it stable. */}
                   <div
                     className="h-full w-full transition-transform duration-200"
                     style={{
                       transformStyle: "preserve-3d",
                       transform: `scale(${scale})`,
                       boxShadow: emphasisShadow,
-                      willChange: "transform, box-shadow",
+                      backgroundColor: "transparent",
+                      borderRadius: "1rem",
+                      backfaceVisibility: "hidden"
                     }}
                   >
-                    {/* Flip inner: flips ONLY if focused (inZone) */}
                     <div
                       className="relative h-full w-full transition-transform duration-500"
-                      style={{
-                        transformStyle: "preserve-3d",
-                        transform: isFlipped && inZone ? "rotateY(180deg)" : "rotateY(0deg)",
-                        willChange: "transform",
-                      }}
+                      style={{ transformStyle: "preserve-3d", transform: isFlipped && appearInZone ? "rotateY(180deg)" : "rotateY(0deg)" }}
                     >
-                      {/* FRONT: photo only */}
+                      {/* front */}
                       <div
                         className="absolute inset-0"
                         style={{
                           backfaceVisibility: "hidden",
                           borderRadius: "1rem",
                           overflow: "hidden",
-                          opacity: inZone ? 1 : 0.4,
-                          filter: inZone ? "none" : "brightness(0.3) contrast(0.88)",
+                          opacity: appearInZone ? 1 : 0.4,
+                          filter: appearInZone ? "none" : "brightness(0.3) contrast(0.88)",
                           backgroundColor: "#0c1a22",
                         }}
                       >
                         {it.photo?.src ? (
-                          <img
-                            src={it.photo.src}
-                            alt={it.photo.alt || `${it.name} portrait`}
-                            loading="lazy"
-                            className="h-full w-full object-cover"
-                          />
+                          <img src={it.photo.src} alt={it.photo.alt || `${it.name} portrait`} loading="lazy" className="h-full w-full object-cover" />
                         ) : (
-                          <div className="h-full w-full grid place-items-center text-white/60">
-                            No Photo
-                          </div>
+                          <div className="h-full w-full grid place-items-center text-white/60">No Photo</div>
                         )}
                       </div>
 
-                      {/* BACK: centered text + action icons slightly higher into textbox */}
+                      {/* back */}
                       <div
                         className="absolute inset-0"
                         style={{
                           transform: "rotateY(180deg)",
                           backfaceVisibility: "hidden",
                           borderRadius: "1rem",
-                          backgroundColor: hexToRgba("#0c1a22", inZone ? 0.92 : 0.12),
-                          opacity: inZone ? 1 : 0.4,
-                          filter: inZone ? "none" : "brightness(0.3) contrast(0.88)",
+                          backgroundColor: hexToRgba("#0c1a22", appearInZone ? 0.92 : 0.12),
+                          opacity: appearInZone ? 1 : 0.4,
+                          filter: appearInZone ? "none" : "brightness(0.3) contrast(0.88)",
                         }}
                       >
-                        {/* Description area, padded at bottom to clear icons */}
-                        <div className="px-4 pt-4 pb-20 h-full w-full flex items-center justify-center text-center">
+                        <div
+                          className="px-4 pt-4 pb-20 h-full w-full flex items-center justify-center text-center"
+                          style={{ opacity: isMovingNow ? 0 : 1, transition: `opacity ${FADE_MS}ms ease` }}
+                        >
                           <p className="text-sm sm:text-base md:text-lg leading-snug text-[#e0e0e0]">
                             {it.description || "No description provided."}
                           </p>
@@ -488,18 +721,19 @@ export function CardFlip({
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 aria-label={`${it.name} LinkedIn`}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition text-white"
                               >
-                                <LinkedInIcon />
+                                <Linkedin size={20} strokeWidth={1.75} aria-hidden="true" />
                               </a>
                             ) : null}
+
                             {it.email ? (
                               <a
                                 href={`mailto:${it.email}`}
                                 aria-label={`Email ${it.name}`}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition text-white"
                               >
-                                <MailIcon />
+                                <Mail size={20} strokeWidth={1.75} aria-hidden="true" />
                               </a>
                             ) : null}
                           </div>
@@ -507,33 +741,99 @@ export function CardFlip({
                       </div>
                     </div>
                   </div>
+                  {appearInZone && !isMovingNow && (
+                    <div className="absolute inset-0 z-50 pointer-events-none">
+                      {(() => {
+                        // Forward navigation always means index+1 (go(1)) if available
+                        const hasForwardIndex = active < displayItems.length - 1
+                        const forwardDismissed = reversed ? dismissedLeftHint : dismissedRightHint
+
+                        // Place the forward arrow at the visual edge: right (normal) or left (reversed)
+                        const edgePos = reversed
+                          ? "left-1 sm:left-1.5 md:left-2"
+                          : "right-1 sm:right-1.5 md:right-2"
+
+                        if (hasForwardIndex && !forwardDismissed) {
+                          return (
+                            <div
+                              className={`absolute top-1/2 -translate-y-1/2 ${edgePos} opacity-95 transition-opacity duration-300`}
+                              style={{ filter: "drop-shadow(0 0 8px rgba(248,218,156,0.35))" }}
+                              aria-hidden
+                            >
+                              {/* wrapper handles horizontal bounce so vertical centering isn't affected */}
+                              <div
+                                className="pointer-events-none"
+                                style={{
+                                  animation: "cardflip-nudge-x 1.4s ease-in-out infinite",
+                                  // bounce inward (→ when normal, ← when reversed)
+                                  ...(reversed ? { ["--nudge-amp"]: "-5px" } : { ["--nudge-amp"]: "5px" })
+                                }}
+                              >
+                                {reversed
+                                  ? <ChevronLeft className="w-7 h-7 text-[#f8da9c]" strokeWidth={2.5} />
+                                  : <ChevronRight className="w-7 h-7 text-[#f8da9c]" strokeWidth={2.5} />
+                                }
+                              </div>
+                            </div>
+                          )
+                        }
+                        return null
+                      })()}
+
+                      {/* Redo / Flip hint with tooltip (hover the icon) */}
+                      {!isFlipped && !dismissedFlipHint && (
+                        <div
+                          className="group/redo pointer-events-auto absolute right-2 top-2 z-[60]"
+                          onPointerDownCapture={e => e.stopPropagation()}
+                          onClick={() => onCardClick(di, it, true)}
+                          aria-hidden
+                          style={{ filter: "drop-shadow(0 0 8px rgba(248,218,156,0.35))" }}
+                        >
+                          <RotateCw className="w-6 h-6 text-[#f8da9c]" strokeWidth={2} />
+                          <div
+                            className="absolute top-7 right-0 px-2 py-1 rounded bg-black/70 text-[#f8da9c] text-[10px] leading-tight whitespace-nowrap
+                     opacity-0 transition-opacity duration-200 pointer-events-none group-hover/redo:opacity-100"
+                          >
+                            Click to Flip
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+
                 </div>
               </div>
 
-              {/* ------------------ Name (always) + Title (only when focused) ------------------ */}
+              {/* labels (un-mirror text) */}
               <div
-                className="absolute -translate-x-1/2 text-center"
-                style={{ left: "50%", top: dotTop + GAP_PX, maxWidth: "min(80vw, 560px)" }}
+                className="absolute -translate-x-1/2 text-center transition-opacity"
+                style={{
+                  left: "50%",
+                  top: dotTop + GAP_PX,
+                  maxWidth: "min(80vw, 560px)",
+                  opacity: isMovingNow ? 0 : 1,
+                  pointerEvents: isMovingNow ? "none" : "auto",
+                  transition: `opacity ${isSweeping ? FADE_MS : FADE_MS + 1000}ms ease`,
+                  transform: reversed ? "scaleX(-1)" : "none",
+                }}
               >
-                <div
-                  className="font-bahnschrift whitespace-nowrap overflow-hidden text-ellipsis"
-                  style={{
-                    color: inZone ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.55)",
-                    fontSize: "clamp(1.05rem, 2.2vw, 1.9rem)",
-                    lineHeight: 1.1,
-                  }}
-                >
-                  {it.name || "Unnamed"}
-                </div>
-
-                {inZone ? (
+                {(appearInZone || !isCrowded) && (
+                  <div
+                    className="font-bahnschrift whitespace-nowrap overflow-hidden text-ellipsis transition-colors"
+                    style={{
+                      color: appearInZone ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.55)",
+                      fontSize: "clamp(1.05rem, 2.2vw, 1.9rem)",
+                      lineHeight: 1.1,
+                    }}
+                  >
+                    {it.name || "Unnamed"}
+                  </div>
+                )}
+                {appearInZone ? (
                   <div
                     className="mt-1"
-                    style={{
-                      color: "rgba(255,255,255,0.85)",
-                      fontSize: "clamp(0.9rem, 1.6vw, 1.2rem)",
-                      lineHeight: 1.15,
-                    }}
+                    style={{ color: "rgba(255,255,255,0.85)", fontSize: "clamp(0.9rem, 1.6vw, 1.2rem)", lineHeight: 1.15 }}
                   >
                     {it.title || ""}
                   </div>
@@ -542,70 +842,34 @@ export function CardFlip({
             </article>
           )
         })}
-
-        {/* End spacer so the last card can align to the dot axis */}
         <div className="flex-shrink-0 h-full" aria-hidden style={{ width: endPad }} />
       </div>
     </section>
   )
 }
 
-/* ───────────────────────────── Icons ───────────────────────────── */
-function LinkedInIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <rect x="2" y="2" width="20" height="20" rx="3" className="fill-white/90" />
-      <path d="M7 17V10" stroke="#0a66c2" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="7" cy="7" r="1.2" fill="#0a66c2" />
-      <path d="M12 17V12.5c0-1.9 2.5-2.1 3.1-.6V17" stroke="#0a66c2" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  )
-}
-function MailIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <rect x="3" y="5" width="18" height="14" rx="2" className="stroke-white/90" strokeWidth="2" />
-      <path d="M5 7l7 6 7-6" className="stroke-white/90" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-/* ───────────────────────────── Helpers ───────────────────────────── */
-const CARD_RATIO = 7 / 5 // height = width * 1.4
-
+/* helpers */
+const CARD_RATIO = 7 / 5
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)) }
-
-function elCenterToAnchor(el, anchorX) {
-  const r = el.getBoundingClientRect()
-  const center = r.left + r.width / 2
-  return center - anchorX
-}
-
-function getNearestByAnchor(els, anchorX) {
+function elCenterToAnchor(el, anchorXScreen) { const r = el.getBoundingClientRect(); return (r.left + r.width / 2) - anchorXScreen }
+function getNearestByAnchor(els, anchorXScreen) {
   let best = 0, bestDist = Infinity
   els.forEach((el, i) => {
     if (!el) return
-    const d = Math.abs(elCenterToAnchor(el, anchorX))
+    const d = Math.abs(elCenterToAnchor(el, anchorXScreen))
     if (d < bestDist) { bestDist = d; best = i }
   })
   return best
 }
-
 function hexToRgba(hex, a = 1) {
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
   if (!m) return `rgba(64,213,209,${a})`
   const r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16)
   return `rgba(${r},${g},${b},${a})`
 }
-
-// Compute a responsive card width bounded by viewport and desired preference.
-// On small screens (<640px): allow a single-column max width.
-// On larger screens: cap to roughly half the viewport minus gutters, so two columns
-// can be visible with overlap.
 function computeCardWidth(vw, preferred) {
   const gutter = 32, lineThickness = 2
   const maxTwoCol = Math.max(220, (vw / 2) - gutter - lineThickness)
   const maxOneCol = Math.max(220, vw - (gutter * 2))
-  const w = vw < 640 ? Math.min(preferred, maxOneCol) : Math.min(preferred, maxTwoCol)
-  return Math.round(w)
+  return Math.round(vw < 640 ? Math.min(preferred, maxOneCol) : Math.min(preferred, maxTwoCol))
 }

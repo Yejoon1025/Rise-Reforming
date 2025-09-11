@@ -3,14 +3,14 @@ import { useState } from "react"
 import { Routes, Route, Navigate } from "react-router-dom"
 
 import LoadingSplash from "./pages/LoadingSplash"
-import { HomeOne } from "./pages/HomeOne"
+import Home from "./pages/Home"
 import { Tech } from "./pages/Tech"
 import { TeamPage } from "./pages/TeamPage"
 import {NewsPage} from "./pages/NewsPage"
 import { TechTwo } from "./pages/TechTwo"
 
 import Footer from "./components/Footer"
-import { Temporary } from "./pages/Temporary"
+import Temporary from "./pages/Temporary"
 
 export default function App() {
   const [showSplash, setShowSplash] = useState(true)
@@ -20,7 +20,7 @@ export default function App() {
       {showSplash && <LoadingSplash onDone={() => setShowSplash(false)} />}
 
       <Routes>
-        <Route path="/about" element={<HomeOne />} />
+        <Route path="/home" element={<Home />} />
         <Route path="/tech" element={<Tech />} />
         <Route path="/team" element={<TeamPage />} />
         <Route path="/news" element={<NewsPage />} />

@@ -1,7 +1,7 @@
 // src/pages/timeline-horizontal-demo.jsx
 import { useState, useEffect } from "react"
 import { CardFlip } from "../components/CardFlip"
-import bg from "../assets/unedited/Table.png"
+import bg from "../assets/backgrounds/Table.png"
 import Navbar from "../components/Navbar"
 import { people, morePeople } from "../data/Profiles"
 import { ChevronDown } from "lucide-react"
@@ -113,6 +113,7 @@ export function TeamPage() {
               overlapPx={60}
               anchorXRatio={0.3}
               anchorYRatio={0.2}
+              reversed
             />
           </div>
         </section>

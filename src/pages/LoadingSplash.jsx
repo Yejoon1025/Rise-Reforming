@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 
-import bg from "../assets/LoadingBG.png"
+import bg from "../assets/UpscaledTest.png"
 import flame from "../assets/Logo_Transparent.png"
 import wordmark from "../assets/Logo_Text.png"
 
