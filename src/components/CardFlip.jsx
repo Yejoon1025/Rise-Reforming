@@ -293,19 +293,6 @@ export function CardFlip({
 
     const dirFactor = reversed ? -1 : 1
 
-    const onWheel = e => {
-      if (isSweeping) return
-      e.preventDefault()
-      if (isAutoScrollingRef.current || wheelCooldownRef.current) return
-      const magnitude = Math.abs(e.deltaX) + Math.abs(e.deltaY)
-      if (magnitude < 2) return
-      const dir = ((e.deltaX || e.deltaY) > 0 ? +1 : -1) * dirFactor
-      wheelCooldownRef.current = true
-      resetInactivityTimer()
-      go(dir)
-      setTimeout(() => (wheelCooldownRef.current = false), WHEEL_COOLDOWN_MS)
-    }
-
     const onTouchStart = e => {
       if (isSweeping || e.touches.length !== 1) return
       touchActiveRef.current = true
@@ -328,12 +315,10 @@ export function CardFlip({
       } else snapToNearest()
     }
 
-    scroller.addEventListener("wheel", onWheel, { passive: false })
     scroller.addEventListener("touchstart", onTouchStart, { passive: true })
     scroller.addEventListener("touchmove", onTouchMove, { passive: false })
     scroller.addEventListener("touchend", onTouchEnd, { passive: true })
     return () => {
-      scroller.removeEventListener("wheel", onWheel)
       scroller.removeEventListener("touchstart", onTouchStart)
       scroller.removeEventListener("touchmove", onTouchMove)
       scroller.removeEventListener("touchend", onTouchEnd)
@@ -515,6 +500,27 @@ export function CardFlip({
   const showDomLeft = showLeftTimeline     // hide DOM-left while sweeping
   const showDomRight = true                // keep DOM-right visible
 
+  const NameWithBreak = ({ name, limit = 20 }) => {
+  const value = (name ?? "Unnamed").trim();
+  if (value.length <= limit) return <>{value}</>;
+
+  const cutAt = (() => {
+    const i = value.lastIndexOf(" ", limit);
+    return i >= 0 ? i : limit;
+  })();
+
+  const first = value.slice(0, cutAt);
+  const second = value.slice(cutAt + (value[cutAt] === " " ? 1 : 0));
+
+  return (
+    <>
+      {first}
+      <br />
+      {second}
+    </>
+  );
+};
+
   return (
     <section ref={sectionRef} className={`relative w-full ${className}`} aria-label="CardFlip Horizontal">
       {/* timeline overlay (mirrored visually when reversed) */}
@@ -613,6 +619,8 @@ export function CardFlip({
           const isMoving = isSweeping && sweepKeys.includes(key)
           const isMovingNow = isMoving && sweepPhase !== "idle"
 
+          const hasBackImage = !!it.backImage?.src
+
           let sweepTransform = "translate3d(0,0,0)"
           let sweepOpacity = 1
           let sweepTransition = `transform ${SWEEP_UP_MS}ms ease-out, opacity ${FADE_MS}ms ease-out`
@@ -690,55 +698,76 @@ export function CardFlip({
                       </div>
 
                       {/* back */}
-                      <div
-                        className="absolute inset-0"
-                        style={{
-                          transform: "rotateY(180deg)",
-                          backfaceVisibility: "hidden",
-                          borderRadius: "1rem",
-                          backgroundColor: hexToRgba("#0c1a22", appearInZone ? 0.92 : 0.12),
-                          opacity: appearInZone ? 1 : 0.4,
-                          filter: appearInZone ? "none" : "brightness(0.3) contrast(0.88)",
-                        }}
-                      >
-                        <div
-                          className="px-4 pt-4 pb-20 h-full w-full flex items-center justify-center text-center"
-                          style={{ opacity: isMovingNow ? 0 : 1, transition: `opacity ${FADE_MS}ms ease` }}
-                        >
-                          <p className="text-sm sm:text-base md:text-lg leading-snug text-[#e0e0e0]">
-                            {it.description || "No description provided."}
-                          </p>
-                        </div>
+<div
+  className="absolute inset-0"
+  style={{
+    transform: "rotateY(180deg)",
+    backfaceVisibility: "hidden",
+    borderRadius: "1rem",
+    backgroundColor: hexToRgba("#0c1a22", appearInZone ? 0.92 : 0.12),
+    opacity: appearInZone ? 1 : 0.4,
+    filter: appearInZone ? "none" : "brightness(0.3) contrast(0.88)",
+  }}
+>
+  <div
+    className={
+      hasBackImage
+        // with picture: add a bit more top padding + larger gap to push text down
+        ? "px-4 pt-10 sm:pt-10 pb-20 h-full w-full flex flex-col items-center justify-start text-center gap-4 md:gap-5"
+        // no picture: keep original centering/spacing exactly the same
+        : "px-4 pt-4 pb-20 h-full w-full flex items-center justify-center text-center"
+    }
+    style={{ opacity: isMovingNow ? 0 : 1, transition: `opacity ${FADE_MS}ms ease` }}
+  >
+    {hasBackImage ? (
+      <div className="w-28 sm:w-32 md:w-36 aspect-square overflow-hidden rounded-md">
+        <img
+          src={it.backImage.src}
+          alt={it.backImage.alt || `${it.name} graphic`}
+          loading="lazy"
+          className="h-full w-full object-cover"
+        />
+      </div>
+    ) : null}
 
-                        {(it.linkedin || it.email) && (
-                          <div
-                            className="absolute left-0 right-0 flex items-center justify-center gap-3"
-                            style={{ bottom: ICONS_HB }}
-                          >
-                            {it.linkedin ? (
-                              <a
-                                href={it.linkedin}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                aria-label={`${it.name} LinkedIn`}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition text-white"
-                              >
-                                <Linkedin size={20} strokeWidth={1.75} aria-hidden="true" />
-                              </a>
-                            ) : null}
+    <p className={hasBackImage
+      ? "mt-2 sm:mt-3 text-sm sm:text-base md:text-lg leading-relaxed text-[#e0e0e0]"
+      : "text-sm sm:text-base md:text-lg leading-snug text-[#e0e0e0]"
+    }>
+      {it.description || "No description provided."}
+    </p>
+  </div>
 
-                            {it.email ? (
-                              <a
-                                href={`mailto:${it.email}`}
-                                aria-label={`Email ${it.name}`}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition text-white"
-                              >
-                                <Mail size={20} strokeWidth={1.75} aria-hidden="true" />
-                              </a>
-                            ) : null}
-                          </div>
-                        )}
-                      </div>
+  {(it.linkedin || it.email) && (
+    <div
+      className="absolute left-0 right-0 flex items-center justify-center gap-3"
+      style={{ bottom: ICONS_HB }}
+    >
+      {it.linkedin ? (
+        <a
+          href={it.linkedin}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`${it.name} LinkedIn`}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition text-white"
+        >
+          <Linkedin size={20} strokeWidth={1.75} aria-hidden="true" />
+        </a>
+      ) : null}
+
+      {it.email ? (
+        <a
+          href={`mailto:${it.email}`}
+          aria-label={`Email ${it.name}`}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition text-white"
+        >
+          <Mail size={20} strokeWidth={1.75} aria-hidden="true" />
+        </a>
+      ) : null}
+    </div>
+  )}
+</div>
+
                     </div>
                   </div>
                   {appearInZone && !isMovingNow && (
@@ -807,38 +836,39 @@ export function CardFlip({
 
               {/* labels (un-mirror text) */}
               <div
-                className="absolute -translate-x-1/2 text-center transition-opacity"
-                style={{
-                  left: "50%",
-                  top: dotTop + GAP_PX,
-                  maxWidth: "min(80vw, 560px)",
-                  opacity: isMovingNow ? 0 : 1,
-                  pointerEvents: isMovingNow ? "none" : "auto",
-                  transition: `opacity ${isSweeping ? FADE_MS : FADE_MS + 1000}ms ease`,
-                  transform: reversed ? "scaleX(-1)" : "none",
-                }}
-              >
-                {(appearInZone || !isCrowded) && (
-                  <div
-                    className="font-bahnschrift whitespace-nowrap overflow-hidden text-ellipsis transition-colors"
-                    style={{
-                      color: appearInZone ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.55)",
-                      fontSize: "clamp(1.05rem, 2.2vw, 1.9rem)",
-                      lineHeight: 1.1,
-                    }}
-                  >
-                    {it.name || "Unnamed"}
-                  </div>
-                )}
-                {appearInZone ? (
-                  <div
-                    className="mt-1"
-                    style={{ color: "rgba(255,255,255,0.85)", fontSize: "clamp(0.9rem, 1.6vw, 1.2rem)", lineHeight: 1.15 }}
-                  >
-                    {it.title || ""}
-                  </div>
-                ) : null}
-              </div>
+  className="absolute -translate-x-1/2 text-center transition-opacity"
+  style={{
+    left: "50%",
+    top: dotTop + GAP_PX,
+    maxWidth: "min(80vw, 560px)",
+    opacity: isMovingNow ? 0 : 1,
+    pointerEvents: isMovingNow ? "none" : "auto",
+    transition: `opacity ${isSweeping ? FADE_MS : FADE_MS + 1000}ms ease`,
+    transform: reversed ? "scaleX(-1)" : "none",
+  }}
+>
+  {(appearInZone || !isCrowded) && (
+    <div
+      className="font-bahnschrift overflow-hidden transition-colors break-words"
+      style={{
+        color: appearInZone ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.55)",
+        fontSize: "clamp(1.05rem, 2.2vw, 1.9rem)",
+        lineHeight: 1.1,
+      }}
+    >
+      <NameWithBreak name={it.name} limit={20} />
+    </div>
+  )}
+
+  {appearInZone ? (
+    <div
+      className="mt-1"
+      style={{ color: "rgba(255,255,255,0.85)", fontSize: "clamp(0.9rem, 1.6vw, 1.2rem)", lineHeight: 1.15 }}
+    >
+      {it.title || ""}
+    </div>
+  ) : null}
+</div>
             </article>
           )
         })}

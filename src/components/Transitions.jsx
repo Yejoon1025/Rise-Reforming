@@ -159,7 +159,7 @@ export function zoomOut({
   onDone,
   focal = { x: 50, y: 50 },
   scaleTo = 0.35,
-  durationMs = 1200,
+  durationMs = 900,
   easing = "cubic-bezier(0.22,1,0.36,1)",
   blurPx = 4
 }) {
@@ -213,7 +213,7 @@ export function zoomIn({
   onDone,
   focal = { x: 50, y: 50 },
   scaleFrom = 0.35,
-  durationMs = 1200,
+  durationMs = 900,
   easing = "cubic-bezier(0.22,1,0.36,1)",
   blurPx = 4
 }) {
@@ -252,6 +252,65 @@ export function zoomIn({
   })
 
   afterTransition(toRef, durationMs, () => {
+    fromRef.classList.add("hidden")
+    cleanupNode(fromRef)
+    cleanupNode(toRef)
+    toRef.style.pointerEvents = "auto"
+    onDone?.()
+  })
+}
+
+export function crossFade({
+  fromRef,
+  toRef,
+  onDone,
+  durationMs = 800,
+  easing = "cubic-bezier(0.22,1,0.36,1)",
+  withBlur = false,
+  blurPx = 2
+}) {
+  if (!fromRef || !toRef) {
+    onDone?.()
+    return
+  }
+
+  // Prepare TO (behind)
+  toRef.classList.remove("hidden")
+  toRef.style.zIndex = "0"
+  toRef.style.pointerEvents = "none"
+  toRef.style.willChange = withBlur ? "opacity, filter" : "opacity"
+  toRef.style.transitionProperty = withBlur ? "opacity, filter" : "opacity"
+  toRef.style.transitionDuration = `${durationMs}ms`
+  toRef.style.transitionTimingFunction = easing
+  toRef.style.opacity = "0"
+  if (withBlur) toRef.style.filter = `blur(${blurPx}px)`
+
+  // Prepare FROM (on top)
+  fromRef.classList.remove("hidden")
+  fromRef.style.zIndex = "20"
+  fromRef.style.pointerEvents = "none"
+  fromRef.style.willChange = withBlur ? "opacity, filter" : "opacity"
+  fromRef.style.transitionProperty = withBlur ? "opacity, filter" : "opacity"
+  fromRef.style.transitionDuration = `${durationMs}ms`
+  fromRef.style.transitionTimingFunction = easing
+  fromRef.style.opacity = "1"
+  if (withBlur) fromRef.style.filter = "blur(0px)"
+
+  // Force layout
+  void fromRef.getBoundingClientRect()
+
+  // Animate in the next frame
+  requestAnimationFrame(() => {
+    toRef.style.opacity = "1"
+    fromRef.style.opacity = "0"
+    if (withBlur) {
+      toRef.style.filter = "blur(0px)"
+      fromRef.style.filter = `blur(${blurPx}px)`
+    }
+  })
+
+  // Finish when FROM finishes its transition
+  afterTransition(fromRef, durationMs, () => {
     fromRef.classList.add("hidden")
     cleanupNode(fromRef)
     cleanupNode(toRef)

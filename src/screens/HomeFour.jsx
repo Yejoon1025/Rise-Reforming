@@ -1,7 +1,8 @@
 import { useRef } from "react"
-import bg from "../assets/backgrounds/Globe.png"
+import bg from "../assets/Globe.png"
 import { GlowDotProvider } from "../components/GlowDotProvider"
 import { PinnedGlowDot } from "../components/PinnedGlowDot"
+import { Home9, Home10, Home11 } from "../data/PageContent"
 
 export function HomeFour() {
   const sectionRef = useRef(null)
@@ -24,44 +25,38 @@ export function HomeFour() {
       >
 
          <PinnedGlowDot
-          containerRef={sectionRef}
-          imageSrc={bg}
-          normX={0.32}
-          normY={0.42}
-          size={12}
-          color="#3ca6a6"
-          text="1kg of Rise’s DME will avoid close to 4.5kg of CO2"
-          boxWidth={320}
-          dotId="gd-8"
-          defaultSide="right"
-        />
-
-        <PinnedGlowDot
-          containerRef={sectionRef}
-          imageSrc={bg}
-          normX={0.6}
-          normY={0.7}
-          size={12}
-          color="#3ca6a6"
-          text="At full scale: 26% of US annual post-industrial plastic waste | 14,000,000 tonnes of CO2 per year"
-          boxWidth={320}
-          dotId="gd-9"
-          defaultSide="left"
-          defaultGap={300}
-        />
-
-        <PinnedGlowDot
-          containerRef={sectionRef}
-          imageSrc={bg}
-          normX={0.6}
-          normY={0.7}
-          size={12}
-          color="#3ca6a6"
-          text="Equivalently: 1500 soccer stadiums of plastic | 1.6 million cars off the road"
-          boxWidth={320}
-          dotId="gd-10"
-          defaultSide="right"
-        />
+            containerRef={sectionRef}
+            imageSrc={bg}
+            normX={0.32}
+            normY={0.42}
+            text= {Home9}
+            dotId="h5-1"
+            defaultOffsetX = {-100}
+            defaultOffsetY = {100}
+            boxNumber = "1"
+          />
+          <PinnedGlowDot
+            containerRef={sectionRef}
+            imageSrc={bg}
+            normX={0.6}
+            normY={0.7}
+            text= {Home10}
+            dotId="h5-2"
+            defaultOffsetX = {-250}
+            defaultOffsetY = {-180}
+            boxNumber = "2"
+          />
+          <PinnedGlowDot
+            containerRef={sectionRef}
+            imageSrc={bg}
+            normX={0.6}
+            normY={0.7}
+            text= {Home11}
+            dotId="h5-3"
+            defaultOffsetX = {100}
+            defaultOffsetY = {-170}
+            boxNumber = "2"
+          />
 
       </GlowDotProvider>
     </section>

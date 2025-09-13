@@ -2,14 +2,18 @@
 // Vite + React + Tailwind v4 — single-file page export.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import HomeOne from '../screens/HomeOne.jsx'
 import { HomeTwo } from '../screens/HomeTwo.jsx'
 import { HomeThree } from '../screens/HomeThree.jsx'
 import { HomeFour } from '../screens/HomeFour.jsx'
-import OverlayOne from '../screens/OverlayOne.jsx'
-import OverlayTwo from '../screens/OverlayTwo'
+import HomeOverlayOne from '../screens/HomeOverlayOne.jsx'
+import HomeOverlayTwo from '../screens/HomeOverlayTwo'
 import * as T from '../components/Transitions.jsx'
+import { ChevronRight } from 'lucide-react'
+
+
 const TRANSITIONS = { ...T }
 
 // ---- CODE CONFIG (code-side "menu") ---------------------------------
@@ -18,6 +22,23 @@ const PAGE_TRANSITIONS = {
   screen2: { up: 'slideOut', down: 'slideOut' },
   screen3: { up: 'slideIn', down: 'zoomOut' },
   screen4: { up: 'zoomIn' }
+}
+// --- DOTS: labels/targets + per-dot transition you want to use on click ---
+const DOT_SECTIONS = [
+  { id: 1, label: "Problem", target: 1 }, // overlay2 (bright)
+  { id: 2, label: 'Solution', target: 2 },
+  { id: 3, label: 'Value Proposition',  target: 3 },
+  { id: 4, label: 'Vision', target: 4 },
+]
+
+// Choose what animation should happen when clicking each dot.
+// Use names from your TRANSITIONS export (e.g., 'slideIn', 'slideOut', 'zoomIn', 'zoomOut').
+// Special case: when going 0 -> 1, we use the overlay mover (overlaySlide) regardless.
+const DOT_TRANSITIONS = {
+  1: 'slideOut', // any non-overlay → overlay2
+  2: 'slideIn',
+  3: 'zoomIn',
+  4: 'zoomOut',
 }
 // --------------------------------------------------------------------
 
@@ -127,7 +148,9 @@ function runTransition({ name, fromEl, toEl, onDone }) {
 
 // ROUTE INDEX:
 // 0 = overlay1, 1 = overlay2, 2 = screen2, 3 = screen3, 4 = screen4
-export default function TransitionsPagerPage() {
+export default function Home() {
+  const navigate = useNavigate();
+
   // Screen 1 GROUP (moves as one)
   const s1GroupRef = useRef(null)
 
@@ -150,8 +173,154 @@ export default function TransitionsPagerPage() {
   const [at, setAt] = useState(0)
   const { isAnimating, start } = useAnimLock()
 
+  // NEW: one-time hint visibility (starts true on fresh load; never returns once dismissed)
+  const [showHint, setShowHint] = useState(true)
+
+  // Dots configuration (match TeamPage style/position)
+const dotSections = [
+  { id: 1, label: 'First Overlay', target: 1 },
+  { id: 2, label: 'Second Screen', target: 2 },
+  { id: 3, label: 'Third Screen',  target: 3 },
+  { id: 4, label: 'Fourth Screen', target: 4 },
+]
+
+// Map an index to its root element
+function getRefFor(idx) {
+  if (idx === 0 || idx === 1) return s1GroupRef.current // overlay1/overlay2 live in the S1 group
+  if (idx === 2) return s2Ref.current
+  if (idx === 3) return s3Ref.current
+  if (idx === 4) return s4Ref.current
+  return null
+}
+
+// Prep Screen 1 group so that when it becomes visible, it's already at overlay2 (bright shown)
+function prepS1ForOverlay2() {
+  // show the S1 group container
+  s1GroupRef.current?.classList.remove('hidden')
+  baseS1Ref.current?.classList.remove('hidden')
+
+  // mover at overlay2 (up) & bright visible
+  overlayMoverRef.current?.classList.add('-translate-y-full')
+  overlayMoverRef.current?.classList.remove('translate-y-0')
+  brightRef.current?.classList.add('opacity-100')
+  brightRef.current?.classList.remove('opacity-0')
+}
+
+// Direct, single-step transition on dot click (no chaining)
+const directTo = useCallback((target) => {
+  if (![1,2,3,4].includes(target)) return
+  if (target === at) return
+
+  const finishLock = start()
+  if (!finishLock) return
+
+  const fromEl = getRefFor(at)
+
+  // Special: overlay1 (0) -> overlay2 (1) uses the mover slide (matches your overlay behavior)
+  if (at === 0 && target === 1) {
+    overlaySlide({
+      moverEl: overlayMoverRef.current,
+      brightEl: brightRef.current,
+      direction: 'down',
+      onDone: () => { setAt(1); finishLock() }
+    })
+    return
+  }
+
+  // Prepare destination screen
+  const toEl = getRefFor(target)
+  if (target === 1) prepS1ForOverlay2() // make sure overlay2 is the visible state
+
+  // Pick the single transition to use (per-dot). Defaults to 'slideIn' if unknown.
+  const chosen = DOT_TRANSITIONS[target] || 'slideIn'
+
+  // Show target (if your transition needs it) and run one transition
+  toEl?.classList.remove('hidden')
+  runTransition({
+    name: chosen,
+    fromEl,
+    toEl,
+    onDone: () => {
+      // Hide non-target screens defensively
+      if (target !== 2) s2Ref.current?.classList.add('hidden')
+      if (target !== 3) s3Ref.current?.classList.add('hidden')
+      if (target !== 4) s4Ref.current?.classList.add('hidden')
+      if (target !== 1) s1GroupRef.current?.classList.add('hidden')
+      setAt(target)
+      finishLock()
+    }
+  })
+}, [at, start])
+
+// Jump helper: set DOM to the correct resting state for a target index.
+// Targets: 1 = overlay2, 2 = screen2, 3 = screen3, 4 = screen4.
+// When at === 0 (first overlay), all dots render empty (no "active" dot).
+const jumpTo = (target) => {
+  if (![1,2,3,4].includes(target)) return
+
+  // Hide everything first
+  s1GroupRef.current?.classList.add('hidden')
+  s2Ref.current?.classList.add('hidden')
+  s3Ref.current?.classList.add('hidden')
+  s4Ref.current?.classList.add('hidden')
+
+  // Reset bright/overlay mover to a safe baseline
+  if (brightRef.current) {
+    brightRef.current.classList.remove('transition-opacity','duration-700','ease-out')
+  }
+  if (overlayMoverRef.current) {
+    overlayMoverRef.current.classList.remove('transition-transform','duration-700','ease-out')
+  }
+
+  if (target === 1) {
+    // Show Screen 1 group with overlay2 visible
+    s1GroupRef.current?.classList.remove('hidden')
+    baseS1Ref.current?.classList.remove('hidden')
+
+    // mover at overlay2 (up) & bright visible
+    overlayMoverRef.current?.classList.add('-translate-y-full')
+    overlayMoverRef.current?.classList.remove('translate-y-0')
+
+    brightRef.current?.classList.add('opacity-100')
+    brightRef.current?.classList.remove('opacity-0')
+
+    setAt(1)
+    return
+  }
+
+  if (target === 2) {
+    s2Ref.current?.classList.remove('hidden')
+    // ensure bright is hidden to avoid ghosting
+    brightRef.current?.classList.add('opacity-0')
+    brightRef.current?.classList.remove('opacity-100')
+    setAt(2)
+    return
+  }
+
+  if (target === 3) {
+    s3Ref.current?.classList.remove('hidden')
+    brightRef.current?.classList.add('opacity-0')
+    brightRef.current?.classList.remove('opacity-100')
+    setAt(3)
+    return
+  }
+
+  if (target === 4) {
+    s4Ref.current?.classList.remove('hidden')
+    brightRef.current?.classList.add('opacity-0')
+    brightRef.current?.classList.remove('opacity-100')
+    setAt(4)
+    return
+  }
+}
+
+// Which dot should appear “active”?
+// On first overlay (at === 0), return null so ALL dots appear empty.
+const activeDot = at === 0 ? null : at
+
+
   // Replace with your asset or import it
-  const BRIGHT_IMAGE_SRC = '/H1B.png'
+  const BRIGHT_IMAGE_SRC = '/HomeOneLight.png'
 
   // Initial visibility
   useEffect(() => {
@@ -194,6 +363,9 @@ export default function TransitionsPagerPage() {
     }
 
     if (at === 1) {
+      // HIDE HINT forever after first down action from overlay2
+      if (showHint) setShowHint(false)
+
       // Screen1 group (overlay2 visible) -> Screen2
       if (brightRef.current) {
         brightRef.current.classList.add('transition-opacity','duration-700','ease-out')
@@ -230,7 +402,7 @@ export default function TransitionsPagerPage() {
     }
 
     finishLock()
-  }, [at, start])
+  }, [at, start, showHint])
 
   const goUp = useCallback(() => {
     const finishLock = start()
@@ -302,6 +474,7 @@ export default function TransitionsPagerPage() {
       if (isAnimating) return
       if (e.key === 'ArrowDown' || e.key === 'PageDown') { e.preventDefault(); goDown() }
       if (e.key === 'ArrowUp' || e.key === 'PageUp') { e.preventDefault(); goUp() }
+      if (e.key === 'ArrowRight' && at === 4) {e.preventDefault(); navigate('/tech')}
     }
     const el = containerRef.current
     el?.addEventListener('wheel', onWheel, { passive: true })
@@ -335,6 +508,17 @@ export default function TransitionsPagerPage() {
       window.removeEventListener('touchmove', block, optsNP)
     }
   }, [isAnimating])
+
+  // NEW: dismiss hint on any click while overlay2 is visible
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    function handleClick() {
+      if (at === 1 && showHint) setShowHint(false)
+    }
+    el.addEventListener('click', handleClick)
+    return () => el.removeEventListener('click', handleClick)
+  }, [at, showHint])
 
   return (
     <div
@@ -370,11 +554,11 @@ export default function TransitionsPagerPage() {
           >
             {/* Layer 1 */}
             <div ref={o1Ref} className="relative h-screen w-full">
-              <OverlayOne />
+              <HomeOverlayOne />
             </div>
             {/* Layer 2 */}
             <div ref={o2Ref} className="relative h-screen w-full">
-              <OverlayTwo containerRef={overlayMoverRef}/>
+              <HomeOverlayTwo containerRef={overlayMoverRef}/>
             </div>
           </div>
         </div>
@@ -390,6 +574,59 @@ export default function TransitionsPagerPage() {
       <div ref={s4Ref} className="fixed inset-0 hidden">
         <HomeFour />
       </div>
+      {/* --- PROGRESS DOTS (TeamPage look/feel) --- */}
+<div className="absolute top-1/2 right-8 -translate-y-1/2 flex flex-col gap-6 z-[60]">
+  {DOT_SECTIONS.map((s) => {
+    const activeDot = at === 0 ? null : at // on overlay1, all dots are empty
+    return (
+      <div key={s.id} className="relative group flex items-center">
+        {/* Hover label */}
+        <span className="absolute right-8 opacity-0 group-hover:opacity-100 transition-opacity text-sm text-white whitespace-nowrap">
+          {s.label}
+        </span>
+
+        {/* Dot */}
+        <button
+          onClick={() => directTo(s.target)}
+          aria-label={s.label}
+          className={`w-4 h-4 rounded-full border-2 border-white transition-colors ${
+            activeDot === s.target ? 'bg-white' : 'bg-transparent'
+          }`}
+        />
+      </div>
+    )
+  })}
+</div>
+
+{/* --- NEXT ARROW (visible only on 4th screen) --- */}
+<div
+        className={`absolute bottom-8 right-8 z-[60] group transition-opacity duration-700 flex items-center ${
+          at === 4 ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+      >
+        {/* Hover label to the left, styled like dot labels */}
+        <span className="absolute right-12 opacity-0 group-hover:opacity-100 transition-opacity text-sm text-white whitespace-nowrap">
+          Learn more about our tech
+        </span>
+
+        {/* Chevron icon button */}
+        <button
+      onClick={() => navigate("/tech")}
+      aria-label="Continue"
+      className="p-2 hover:opacity-80 transition-opacity"
+    >
+      <ChevronRight className="text-white animate-bounce-x" size={32} />
+
+    </button>
+      </div>
+{/* --- HINT TEXT (only on second overlay) --- */}
+{at === 1 && showHint && (
+  <div
+    className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[70] text-white/70 text-sm md:text-base animate-pulse select-none pointer-events-auto"
+  >
+    ↓ or hover to reveal dots
+  </div>
+)}
     </div>
   )
 }

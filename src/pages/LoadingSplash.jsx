@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 
-import bg from "../assets/UpscaledTest.png"
+import bg from "../assets/Top.png"
 import flame from "../assets/Logo_Transparent.png"
 import wordmark from "../assets/Logo_Text.png"
 
@@ -11,7 +11,7 @@ export default function LoadingSplash({ onDone }) {
       FLAME_H: "h-[116px] sm:h-[128px] md:h-[140px] lg:h-[156px] xl:h-[168px]",
       TEXT_H:  "h-[72px]  sm:h-[78px]  md:h-[86px]  lg:h-[94px]  xl:h-[102px]",
       OVERLAP: 65,
-      BG_SHIFT_PX: 40,
+      BG_SHIFT_PX: 0,
       EXIT_MS: 1200, // slower & smoother
     }),
     []

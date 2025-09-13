@@ -1,5 +1,5 @@
 import { useRef } from "react"
-import bg from "../assets/PageTwoBG.png"
+import bg from "../assets/HomeTwo.png"
 
 export default function Temporary() {
   const sectionRef = useRef(null)

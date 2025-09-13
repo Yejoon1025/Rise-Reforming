@@ -1,7 +1,8 @@
 import { useRef } from "react"
-import bg from "../assets/backgrounds/H2.png"
+import bg from "../assets/HomeTwo.png"
 import { GlowDotProvider } from "../components/GlowDotProvider"
 import { PinnedGlowDot } from "../components/PinnedGlowDot"
+import { Home4, Home5 } from "../data/PageContent"
 
 export function HomeTwo() {
   const sectionRef = useRef(null)
@@ -19,39 +20,31 @@ export function HomeTwo() {
       </div>
       <GlowDotProvider
         baseRef={sectionRef}         // ← base element we animate/commit
-        openStrategy="all"
+        openStrategy="next"
         threshold={0.3}
       >
-
-
         <PinnedGlowDot
-          containerRef={sectionRef}
-          imageSrc={bg}
-          normX={0.45}
-          normY={0.6}
-          size={12}
-          color="#3ca6a6"
-          text="Rise Reforming repurposes biogas (RNG) waste into dimethyl ether (DME), an in-demand and versatile chemical"
-          boxWidth={320}
-          dotId="gd-3"
-          defaultSide="left"
-          defaultGap={300}
-        />
-
+                        containerRef={sectionRef}
+                        imageSrc={bg}
+                        normX={0.49}
+                        normY={0.7}
+                        text= {Home4}
+                        dotId="h2-1"
+                        defaultOffsetX = {-500}
+                        defaultOffsetY = {-200}
+                        boxNumber = "1"
+                      />
         <PinnedGlowDot
-          containerRef={sectionRef}
-          imageSrc={bg}
-          normX={0.6}
-          normY={0.55}
-          size={12}
-          color="#3ca6a6"
-          text="DME’s global market size is almost $10 bn and is expected to double over the next decade"
-          boxWidth={320}
-          dotId="gd-4"
-          defaultSide="right"
-        />
-
-
+                        containerRef={sectionRef}
+                        imageSrc={bg}
+                        normX={0.62}
+                        normY={0.65}
+                        text= {Home5}
+                        dotId="h2-2"
+                        defaultOffsetX = {100}
+                        defaultOffsetY = {-200}
+                        boxNumber = "2"
+                      />
       </GlowDotProvider>
     </section>
   )

@@ -52,12 +52,11 @@ export function GlowDotProvider({
   function getVisibleEntriesSorted() {
     const entries = [...dotsRef.current.entries()].filter(([, v]) => v.visible)
     entries.sort((a, b) => {
-      const ra = a[1].getRect?.()
-      const rb = b[1].getRect?.()
-      if (!ra && !rb) return 0
-      if (!ra) return 1
-      if (!rb) return -1
-      return (ra.top ?? 0) - (rb.top ?? 0)
+      const idA = String(a[0]).toLowerCase()
+      const idB = String(b[0]).toLowerCase()
+      if (idA < idB) return -1
+      if (idA > idB) return 1
+      return 0
     })
     return entries
   }

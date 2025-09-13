@@ -1,16 +1,48 @@
-import { GlowDot } from "../components/GlowDot"
-import { useCoverAnchor } from "../components/useCoverAnchor"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { GlowDot } from "./GlowDot.jsx"
+// Assuming you already have this hook/util in your project
+import { useCoverAnchor } from "./useCoverAnchor.js"
 
+/**
+ * PinnedGlowDot — keeps the GlowDot mounted so open state persists
+ *
+ * Instead of returning null while coordinates are not ready, we keep the
+ * GlowDot mounted off-screen and non-interactive, then reveal it when ready.
+ */
 export function PinnedGlowDot({
-  containerRef,  // ref to the section that owns the background
-  imageSrc,      // same URL used for the background image
-  normX,         // 0..1 across the original image width
-  normY,         // 0..1 down the original image height
-  ...dotProps    // any GlowDot props (size, color, text, etc.)
+  containerRef,
+  imageSrc,
+  normX,
+  normY,
+  dotId,
+  className,
+  ...dotProps
 }) {
-  const { top, left, ready } = useCoverAnchor({ containerRef, imageSrc, normX, normY })
-  if (!ready) return null
+  const anchor = useCoverAnchor({ containerRef, imageSrc, normX, normY })
 
-  // GlowDot accepts number (pixels) for top/left
-  return <GlowDot top={top} left={left} {...dotProps} />
+  // Persist last known coords to avoid jumping back to closed state on remount
+  const [lastCoords, setLastCoords] = useState(null)
+  useEffect(() => {
+    if (anchor && typeof anchor.top === "number" && typeof anchor.left === "number")
+      setLastCoords({ top: anchor.top, left: anchor.left })
+  }, [anchor?.top, anchor?.left])
+
+  const coords = anchor ?? lastCoords
+  const isReady = !!coords
+
+  // When not ready, park off-screen but keep mounted. Prevent click/hover.
+  const safeTop = isReady ? coords.top : -99999
+  const safeLeft = isReady ? coords.left : -99999
+  const mergedClass = [className, isReady ? "" : "opacity-0 pointer-events-none"].filter(Boolean).join(" ")
+
+  return (
+    <GlowDot
+      {...dotProps}
+      dotId={dotId}
+      top={safeTop}
+      left={safeLeft}
+      className={mergedClass}
+      aria-hidden={isReady ? undefined : true}
+    />
+  )
 }

@@ -1,26 +1,48 @@
 export const newsTimelineItems = [
   {
-    date: "July 10, 2024",
-    body: "Text goes here",
-    image: { src: "/George.png", alt: "hi" },
-  },
-  {
-    date: "Aug 20, 2024",
-    body: "Another textbox with identical styling to your GlowDot tooltip.",
-  },
-  {
-    date: "Sep 2, 2024",
-    title: "Optional Title",
-    body: "Cyan center dot stays pinned; background remains fixed.",
-  },
-  {
-    date: "Sep 2, 2021",
-    title: "Optional Title",
-    body: "ADIFJFJOFJ.",
-    href: "https://instagram.com",
+    date: "April 2024",
+    title: "The Idea",
+    body: "Three undergrads under the name Rise Reforming take first place at the DOE's EnergyTech national business plan competition.",
+    href: "https://www.energy.gov/technologytransitions/articles/energytech-university-prize-2024-student-winners-announced.",
     target: "_blank",
-    ariaLabel: "Open insta",
-    image: { src: "/George.png", alt: "hi" },
+    ariaLabel: "Open article",
+    image: { src: "/News1.jpg", alt: "NewsImage" },
+  },
+  {
+    date: "June 2024",
+    title: "Incorporation",
+    body: "Rise Reforming becomes Rise Reforming, Inc",
+  },
+  {
+    date: "October 2024",
+    title: "Humble Beginnings",
+    body: "Proof-of-concept begins at UChicago.",
+    href: "https://college.uchicago.edu/news/student-stories/undergraduate-impact-new-startup-tackles-plastic-waste-disaster ",
+    target: "_blank",
+    ariaLabel: "Open article",
+  },
+  {
+    date: "May 2025",
+    title: "Baby Steps",
+    body: "The team secures funding from UChicago accelerators, TCU's Values and Ventures competition, and VentureWell. CEO George Rose is named Climate Fellow by the 776 Foundation (led by Reddit Co-Founder Alexis Ohanian).",
+    href: "https://www.linkedin.com/posts/alexisohanian_thrilled-to-announce-our-2025-776-foundation-activity-7345937006784356353-NbUe?utm_source=share&utm_medium=member_desktop&rcm=ACoAADbJL0UB7eIMrvaImGK2kLbMmseu0Fvupr8",
+    target: "_blank",
+    ariaLabel: "Open article",
+    image: { src: "/News2.jpg", alt: "NewsImage" },
+  },
+  {
+    date: "June 2025",
+    title: "Expansion",
+    body: "Rise moves into IIT's University Technology Park to continue R&D. Nina Kritikos joins the team as the first hire.",
+    image: { src: "/News3.jpg", alt: "NewsImage" },
+  },
+  {
+    date: "To Date",
+    body: "8 LOIs, 1 pilot site/supply MOU, and 1 pilot purchase agreement signed. Robust board of advisors assembled.",
+  },
+  {
+    title: "Future?",
+    body: "Stay tuned for more!",
   },
 ]
 

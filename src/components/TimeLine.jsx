@@ -1,15 +1,21 @@
-// src/components/timeline-overlay.jsx
+// src/components/TimeLine.jsx
 import { useEffect, useRef, useState } from "react"
+import { ChevronUp } from "lucide-react"
+
+// Match this to the fade in news.jsx if different
+const NEWS_FADE = "transition-opacity duration-700 ease-out"
 
 export function TimeLine({
   items = [],
   backgroundUrl,
+  overlayUrl, // ⟵ NEW: cover image over base background
+  overlayOpacity,
   color = "#3ca6a6",
   progressColor,
   dotSize = 12,
   cardWidth = 420,
   className = "",
-  pushFactor = 0.47, // 0.50 = exact align; <0.5 = slightly less push
+  pushFactor = 0.47,
 }) {
   const sectionRef = useRef(null)
   const panelsRef = useRef([])
@@ -19,25 +25,38 @@ export function TimeLine({
   const [computedCardW, setComputedCardW] = useState(cardWidth)
   const [firstCardH, setFirstCardH] = useState(0)
 
-  // progress line (page scroll)
   const [lineTop, setLineTop] = useState(0)
   const [progressH, setProgressH] = useState(0)
 
-  // nav + UI state
   const isAutoScrollingRef = useRef(false)
   const scrollIdleTimerRef = useRef(null)
   const [showToTop, setShowToTop] = useState(false)
-  const [isAtPageTop, setIsAtPageTop] = useState(true)
-  const [isReturningToTop, setIsReturningToTop] = useState(false) // primes push during scroll-to-top
+  const [isAtPageTop, setIsAtPageTop] = useState(true) // drives fade in/out
+  const [isReturningToTop, setIsReturningToTop] = useState(false)
 
-  // tuning
+  const wheelAccumRef = useRef(0)
+  const touchStartYRef = useRef(0)
+  const touchAccumRef = useRef(0)
+
+  const activeRef = useRef(0)
+  const pendingActiveRef = useRef(null)
+  const centerIORef = useRef(null)
+
+  const [firstDownFlash, setFirstDownFlash] = useState(false)
+  const firstDownTimerRef = useRef(null)
+
   const HYSTERESIS_RATIO = 0.22
   const SOFT_ZONE_RATIO = 0.28
   const progColor = progressColor || color
   const ALIGN_EPS = 6
   const TOP_EPS = 2
+  const WHEEL_TRIGGER_PX = 48
+  const TOUCH_TRIGGER_PX = 36
 
-  // measure first card height (keeps push exact as it resizes)
+  useEffect(() => () => {
+    if (firstDownTimerRef.current) clearTimeout(firstDownTimerRef.current)
+  }, [])
+
   useEffect(() => {
     if (!firstCardRef.current) return
     const el = firstCardRef.current
@@ -51,20 +70,18 @@ export function TimeLine({
     return () => ro.disconnect()
   }, [computedCardW, items.length])
 
-  // window scroll / resize effects (single page scroll)
   useEffect(() => {
     function onScrollOrResize() {
       const root = sectionRef.current
       const vh = window.innerHeight
       if (!root || !vh) return
 
-      // how far into timeline section we are
       const rect = root.getBoundingClientRect()
       const total = Math.max(0, root.scrollHeight - vh)
       const within = clamp(-rect.top, 0, total)
 
       const half = vh / 2
-      const t = Math.max(0, half - within) // line starts at the dot
+      const t = Math.max(0, half - within)
       setLineTop(t)
       setProgressH(Math.max(0, Math.min(half, half - t)))
 
@@ -75,10 +92,17 @@ export function TimeLine({
       setIsAtPageTop(nowAtTop)
       if (nowAtTop && isReturningToTop) setIsReturningToTop(false)
 
-      // debounce: choose nearest panel + unlock nav
       if (scrollIdleTimerRef.current) clearTimeout(scrollIdleTimerRef.current)
       scrollIdleTimerRef.current = setTimeout(() => {
         isAutoScrollingRef.current = false
+
+        const pending = pendingActiveRef.current
+        if (Number.isInteger(pending)) {
+          pendingActiveRef.current = null
+          setActiveStable(pending)
+          return
+        }
+
         const nearest = getNearestIndexWindow(panelsRef.current, vh)
         maybeSetActive(nearest, vh)
       }, 140)
@@ -96,7 +120,6 @@ export function TimeLine({
     }
   }, [cardWidth, isReturningToTop])
 
-  // keyboard navigation
   useEffect(() => {
     const onKey = e => {
       const k = e.key
@@ -113,24 +136,141 @@ export function TimeLine({
       const atTop = Math.abs(timelineRect.top) <= ALIGN_EPS
 
       if (k === "ArrowUp" || k === "PageUp") {
-        if (atTop) return backToTop(true) // prime the push so it animates simultaneously
+        if (atTop) return backToTop(true)
         return go(-1)
       }
 
-      // First Down: align timeline to top (engage sticky) before advancing
-      if (beforeTop) {
-        isAutoScrollingRef.current = true
-        window.scrollTo({ top: window.scrollY + timelineRect.top, behavior: "smooth" })
-        if (scrollIdleTimerRef.current) clearTimeout(scrollIdleTimerRef.current)
-        scrollIdleTimerRef.current = setTimeout(() => { isAutoScrollingRef.current = false }, 420)
-        return
-      }
-
+      if (beforeTop) return alignTimelineTop(timelineRect.top)
       return go(1)
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
   }, [items.length])
+
+  useEffect(() => {
+    const onWheel = e => {
+      const timelineRect = sectionRef.current?.getBoundingClientRect()
+      if (!timelineRect) return
+      const inViewport = timelineRect.top < window.innerHeight && timelineRect.bottom > 0
+      if (!inViewport) return
+      if (isAutoScrollingRef.current) { e.preventDefault(); return }
+
+      wheelAccumRef.current += e.deltaY
+      if (Math.abs(wheelAccumRef.current) < WHEEL_TRIGGER_PX) {
+        e.preventDefault()
+        return
+      }
+
+      const down = wheelAccumRef.current > 0
+      wheelAccumRef.current = 0
+      e.preventDefault()
+
+      const beforeTop = timelineRect.top > ALIGN_EPS
+      const atTop = Math.abs(timelineRect.top) <= ALIGN_EPS
+
+      if (!down) {
+        if (atTop) return backToTop(true)
+        return go(-1)
+      }
+
+      if (beforeTop) return alignTimelineTop(timelineRect.top)
+      return go(1)
+    }
+
+    window.addEventListener("wheel", onWheel, { passive: false })
+    return () => window.removeEventListener("wheel", onWheel)
+  }, [items.length])
+
+  useEffect(() => {
+    const el = sectionRef.current
+    if (!el) return
+
+    const onTouchStart = e => {
+      if (!isInViewport(sectionRef.current)) return
+      touchStartYRef.current = e.touches[0]?.clientY || 0
+      touchAccumRef.current = 0
+    }
+
+    const onTouchMove = e => {
+      if (!isInViewport(sectionRef.current)) return
+      if (isAutoScrollingRef.current) { e.preventDefault(); return }
+      const y = e.touches[0]?.clientY || 0
+      touchAccumRef.current = (touchStartYRef.current - y)
+      e.preventDefault()
+    }
+
+    const onTouchEnd = () => {
+      if (!isInViewport(sectionRef.current)) return
+      if (isAutoScrollingRef.current) return
+
+      const delta = touchAccumRef.current
+      touchAccumRef.current = 0
+      if (Math.abs(delta) < TOUCH_TRIGGER_PX) return
+
+      const timelineRect = sectionRef.current.getBoundingClientRect()
+      const beforeTop = timelineRect.top > ALIGN_EPS
+      const atTop = Math.abs(timelineRect.top) <= ALIGN_EPS
+      const down = delta > 0
+
+      if (!down) {
+        if (atTop) return backToTop(true)
+        return go(-1)
+      }
+
+      if (beforeTop) return alignTimelineTop(timelineRect.top)
+      return go(1)
+    }
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true })
+    el.addEventListener("touchmove", onTouchMove, { passive: false })
+    el.addEventListener("touchend", onTouchEnd, { passive: true })
+    el.addEventListener("touchcancel", onTouchEnd, { passive: true })
+
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart)
+      el.removeEventListener("touchmove", onTouchMove)
+      el.removeEventListener("touchend", onTouchEnd)
+      el.removeEventListener("touchcancel", onTouchEnd)
+    }
+  }, [items.length])
+
+  useEffect(() => {
+    if (!panelsRef.current.length) return
+
+    const io = new IntersectionObserver(
+      entries => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue
+          const idx = Number(e.target.getAttribute("data-idx"))
+          if (Number.isNaN(idx)) continue
+
+          if (isAutoScrollingRef.current) pendingActiveRef.current = idx
+          else setActiveStable(idx)
+        }
+      },
+      { root: null, rootMargin: "-48% 0px -48% 0px", threshold: [0.01] }
+    )
+
+    panelsRef.current.forEach((el, i) => {
+      if (!el) return
+      el.setAttribute("data-idx", String(i))
+      io.observe(el)
+    })
+
+    centerIORef.current = io
+    return () => io.disconnect()
+  }, [items.length])
+
+  function alignTimelineTop(offsetTop) {
+    setFirstDownFlash(true)
+    if (firstDownTimerRef.current) clearTimeout(firstDownTimerRef.current)
+    firstDownTimerRef.current = setTimeout(() => setFirstDownFlash(false), 900)
+
+    isAutoScrollingRef.current = true
+    window.scrollTo({ top: window.scrollY + offsetTop, behavior: "smooth" })
+    if (scrollIdleTimerRef.current) clearTimeout(scrollIdleTimerRef.current)
+    scrollIdleTimerRef.current = setTimeout(() => { isAutoScrollingRef.current = false }, 420)
+  }
 
   function go(delta) {
     const vh = window.innerHeight
@@ -141,41 +281,69 @@ export function TimeLine({
     if (!el) return
     isAutoScrollingRef.current = true
     const top = window.scrollY + el.getBoundingClientRect().top
+    pendingActiveRef.current = next
     window.scrollTo({ top, behavior: "smooth" })
     if (scrollIdleTimerRef.current) clearTimeout(scrollIdleTimerRef.current)
     scrollIdleTimerRef.current = setTimeout(() => {
       isAutoScrollingRef.current = false
-      setActive(next)
+      const idx = Number.isInteger(pendingActiveRef.current) ? pendingActiveRef.current : next
+      pendingActiveRef.current = null
+      setActiveStable(idx)
     }, 420)
   }
 
-  // back-to-top; primePush=true starts the card push before scrolling begins
   function backToTop(primePush = false) {
     if (primePush) setIsReturningToTop(true)
     isAutoScrollingRef.current = true
+    pendingActiveRef.current = 0
     window.scrollTo({ top: 0, behavior: "smooth" })
     if (scrollIdleTimerRef.current) clearTimeout(scrollIdleTimerRef.current)
     scrollIdleTimerRef.current = setTimeout(() => {
       isAutoScrollingRef.current = false
+      const idx = Number.isInteger(pendingActiveRef.current) ? pendingActiveRef.current : 0
+      pendingActiveRef.current = null
+      setActiveStable(idx)
       if (primePush && window.scrollY > TOP_EPS) setIsReturningToTop(false)
     }, 500)
   }
 
+  function setActiveStable(idx) {
+    if (idx === activeRef.current) {
+      focusCard(idx)
+      return
+    }
+    activeRef.current = idx
+    setActive(idx)
+    requestAnimationFrame(() => focusCard(idx))
+  }
+
+  function focusCard(idx) {
+    const container = panelsRef.current[idx]
+    if (!container) return
+    let el =
+      container.querySelector('[data-card]') ||
+      container.querySelector('a[href],button,textarea,input,select,[tabindex]:not([tabindex="-1"])')
+    if (!el) el = container
+    const shouldSetTabIndex = el.getAttribute && el.getAttribute("tabindex") === null && el.tagName === "DIV"
+    if (shouldSetTabIndex) el.setAttribute("tabindex", "0")
+    try { el.focus({ preventScroll: true }) } catch { el.focus() }
+  }
+
   function maybeSetActive(proposedIdx, vh) {
     const centerY = vh / 2
-    const currentEl = panelsRef.current[active]
+    const currentEl = panelsRef.current[activeRef.current]
     const proposedEl = panelsRef.current[proposedIdx]
-    if (!proposedEl) return setActive(proposedIdx)
+    if (!proposedEl) return setActiveStable(proposedIdx)
     const dProposed = Math.abs(elCenterViewportY(proposedEl) - centerY)
     const dCurrent = currentEl ? Math.abs(elCenterViewportY(currentEl) - centerY) : Infinity
     const hysteresisPx = (vh / 2) * HYSTERESIS_RATIO
-    if (dProposed + hysteresisPx < dCurrent) setActive(proposedIdx)
+    if (dProposed + hysteresisPx < dCurrent) setActiveStable(proposedIdx)
   }
 
   function isInSoftZone(i) {
     const vh = window.innerHeight
     const el = panelsRef.current[i]
-    if (!vh || !el) return i === active
+    if (!vh || !el) return i === activeRef.current
     const centerY = vh / 2
     return Math.abs(elCenterViewportY(el) - centerY) <= (vh / 2) * SOFT_ZONE_RATIO
   }
@@ -183,7 +351,7 @@ export function TimeLine({
   return (
     <section
       ref={sectionRef}
-      className={`relative w-full ${className}`}
+      className={`relative z-10 w-full ${className}`} // ⟵ ensure content stays above the overlay image
       style={{
         backgroundImage: `url(${backgroundUrl})`,
         backgroundSize: "cover",
@@ -192,16 +360,28 @@ export function TimeLine({
       }}
       aria-label="Timeline"
     >
-      {/* Sticky overlay: center line + dot */}
+      {/* NEW: full-viewport cover image that fades out when leaving the top */}
+      {overlayUrl ? (
+        <img
+          src={overlayUrl}
+          alt=""
+          aria-hidden
+          className={[
+            // fixed so it covers the base background, unaffected by scroll
+            "fixed inset-0 h-screen w-screen object-cover pointer-events-none z-0",
+          ]}
+          style={{ opacity : overlayOpacity}}
+        />
+      ) : null}
+
+      {/* Sticky overlay (line + dot) */}
       <div className="pointer-events-none absolute inset-0">
         <div className="sticky top-0 h-screen w-full">
-          {/* base line */}
           <div
             className="absolute left-1/2 -translate-x-1/2 bg-[#374151]"
             style={{ top: lineTop, height: `calc(100vh - ${lineTop}px)`, width: "1.25px" }}
             aria-hidden
           />
-          {/* cyan progress above the dot */}
           <div
             className="absolute left-1/2 -translate-x-1/2"
             style={{
@@ -213,7 +393,6 @@ export function TimeLine({
             }}
             aria-hidden
           />
-          {/* center dot */}
           <div
             className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
             style={{ width: dotSize, height: dotSize }}
@@ -231,18 +410,14 @@ export function TimeLine({
         </div>
       </div>
 
-      {/* Panels (page scrolling) */}
+      {/* Panels */}
       <div role="list">
         {items.map((it, i) => {
-          const inZone = isInSoftZone(i)
+          const inZone = isInSoftZone(i) || (i === 0 && firstDownFlash)
+          const isActive = i === active
           const CardTag = it.href ? "a" : "div"
           const cardProps = it.href
-            ? {
-                href: it.href,
-                target: it.target || "_blank",
-                rel: "noopener noreferrer",
-                "aria-label": it.ariaLabel || `Open ${it.title || it.date}`,
-              }
+            ? { href: it.href, target: it.target || "_blank", rel: "noopener noreferrer", "aria-label": it.ariaLabel || `Open ${it.title || it.date}` }
             : {}
 
           const isFirst = i === 0
@@ -256,29 +431,32 @@ export function TimeLine({
               ref={el => (panelsRef.current[i] = el)}
               role="listitem"
               className="min-h-screen w-full"
+              data-idx={i}
             >
               <div className="grid min-h-screen w-full grid-cols-2 items-center">
-                {/* DATE (left) with soft highlight */}
                 <div className="flex justify-end pr-8">
-                  <time
-                    className={`select-none font-sans text-xl md:text-2xl transition-opacity ${
-                      inZone ? "text-white/80" : "text-white/50"
-                    }`}
-                  >
+                  <time className={`select-none font-sans text-xl md:text-2xl transition-opacity z-20 ${inZone ? "text-white/80" : "text-white/50"}`}>
                     {it.date}
                   </time>
                 </div>
 
-                {/* CARD (right) — GlowDot-style with optional link/image */}
                 <div className="pl-8">
                   <CardTag
                     {...cardProps}
                     ref={isFirst ? firstCardRef : null}
+                    data-card
+                    aria-current={isActive ? "step" : undefined}
+                    tabIndex={isActive ? 0 : -1}
                     className={`block rounded-2xl bg-[#0c1a22]/85 text-[#e0e0e0] shadow-xl backdrop-blur-sm px-4 py-3 select-none
-                                transition-[opacity,transform] duration-300 will-change-transform ${
-                                  inZone ? "opacity-100" : "opacity-70"
-                                } ${it.href ? "cursor-pointer hover:opacity-100 focus:opacity-100" : ""}`}
-                    style={{ width: computedCardW, transform: `translateY(${translateY}px)` }}
+                                transition-[opacity,transform] duration-300 will-change-transform
+                                outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0
+                                ${inZone ? "opacity-100" : "opacity-70"}
+                                ${it.href ? "cursor-pointer hover:opacity-100 focus:opacity-100" : ""}`}
+                    style={{
+                      width: computedCardW,
+                      transform: `translateY(${translateY}px)`,
+                      WebkitTapHighlightColor: "transparent"
+                    }}
                   >
                     {it.title ? (
                       <h3 className="mb-2 font-bahnschrift text-2xl md:text-3xl text-[#f8da9c]">
@@ -289,6 +467,10 @@ export function TimeLine({
                     <p className="text-base sm:text-lg md:text-xl lg:text-2xl leading-snug">
                       {it.body}
                     </p>
+
+                    {it.href ? (
+                      <p className="mt-2 text-sm text-white/60">Click to learn more</p>
+                    ) : null}
 
                     {it.image?.src ? (
                       <img
@@ -306,19 +488,17 @@ export function TimeLine({
         })}
       </div>
 
-      {/* Floating "back to top" arrow (centered inside circle) */}
+      {/* Back to top — Chevron only, no circle */}
       <button
         type="button"
         onClick={() => backToTop(true)}
         aria-label="Back to top"
-        className={`fixed bottom-6 right-6 z-50 h-9 w-9 rounded-full border border-white/20 bg-[#0c1a22]/70 backdrop-blur-sm text-white/80
-                    shadow-[0_10px_28px_rgba(0,0,0,0.35)] transition-opacity duration-200
-                    ${showToTop ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"} flex items-center justify-center`}
-        style={{ boxShadow: `0 0 0 1px rgba(255,255,255,0.08), 0 0 12px ${hexToRgba(progColor, 0.35)}` }}
+        className={`fixed bottom-6 right-6 z-50 text-white/80 transition-opacity duration-200
+                    ${showToTop ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"} 
+                    hover:text-white focus:outline-none focus:ring-0`}
+        style={{ background: "transparent", border: "none" }}
       >
-        <svg className="block" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-          <path d="M6 14l6-6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
+        <ChevronUp className="h-6 w-6 animate-bounce" aria-hidden />
       </button>
     </section>
   )
@@ -349,3 +529,9 @@ function computeCardWidth(vw, preferred) {
   const maxOneCol = Math.max(220, vw - (gutter * 2))
   return vw < 640 ? Math.min(preferred, maxOneCol) : Math.min(preferred, maxTwoCol)
 }
+function isInViewport(el) {
+  if (!el) return false
+  const r = el.getBoundingClientRect()
+  return r.top < window.innerHeight && r.bottom > 0
+}
+

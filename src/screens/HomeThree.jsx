@@ -1,7 +1,8 @@
 import { useRef } from "react"
-import bg from "../assets/backgrounds/H3.png"
+import bg from "../assets/HomeThree.png"
 import { GlowDotProvider } from "../components/GlowDotProvider"
 import { PinnedGlowDot } from "../components/PinnedGlowDot"
+import { Home6, Home7, Home8 } from "../data/PageContent"
 
 
 export function HomeThree() {
@@ -13,58 +14,49 @@ export function HomeThree() {
       className="relative h-screen w-full bg-cover bg-center"
       style={{ backgroundImage: `url(${bg})` }}
     >
-      <div className="h-screen w-full flex items-center justify-center md:items-end md:justify-end p-6 md:p-30">
-        <h2 className="font-bahnschrift text-4xl md:text-6xl text-[#f8da9c] text-center md:text-right">
+      <div className="h-full w-full flex items-center justify-center">
+        <h2 className="absolute top-[50%] font-bahnschrift text-4xl md:text-6xl text-[#f8da9c] px-6 text-center">
           Tomorrow's Value
         </h2>
       </div>
 
       <GlowDotProvider
         baseRef={sectionRef}
-        openStrategy="all"          // or "next"
+        openStrategy="next"          // or "next"
         threshold={0.3}
       >
 
         <PinnedGlowDot
-          containerRef={sectionRef}
-          imageSrc={bg}
-          normX={0.2}
-          normY={0.7}
-          size={12}
-          color="#3ca6a6"
-          text="Aerosol: DME is preferred as an alternative propellant in products like air fresheners and hairspray"
-          boxWidth={320}
-          dotId="gd-5"
-          defaultSide="right"
-        />
+                        containerRef={sectionRef}
+                        imageSrc={bg}
+                        normX={0.7}
+                        normY={0.34}
+                        text= {Home6}
+                        dotId="h3-1"
+                        defaultOffsetX = {-100}
+                        defaultOffsetY = {-200}
+                      />
 
         <PinnedGlowDot
-          containerRef={sectionRef}
-          imageSrc={bg}
-          normX={0.32}
-          normY={0.6}
-          size={12}
-          color="#3ca6a6"
-          text="Saving on disposal costs: manufacturing companies often pay over $100/ton to landfill and over $500/ton to incinerate their post-industrial plastic waste"
-          boxWidth={320}
-          dotId="gd-6"
-          defaultSide="top"
-          defaultGap={300}
-        />
-
+                        containerRef={sectionRef}
+                        imageSrc={bg}
+                        normX={0.2}
+                        normY={0.7}
+                        text= {Home7}
+                        dotId="h3-2"
+                        defaultOffsetX = {-100}
+                        defaultOffsetY = {-100}
+                      />
         <PinnedGlowDot
-          containerRef={sectionRef}
-          imageSrc={bg}
-          normX={0.75}
-          normY={0.4}
-          size={12}
-          color="#3ca6a6"
-          text="Alternative Fuel: DME can be blended with propane to create an alternative fuel that achieves higher combustion efficiency with lower lifecycle emissions"
-          boxWidth={320}
-          dotId="gd-7"
-          defaultSide="left"
-        />
-
+                        containerRef={sectionRef}
+                        imageSrc={bg}
+                        normX={0.78}
+                        normY={0.66}
+                        text= {Home8}
+                        dotId="h3-3"
+                        defaultOffsetX = {-100}
+                        defaultOffsetY = {-100}
+                      />
 
       </GlowDotProvider>
     </section>
