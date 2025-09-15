@@ -15,6 +15,7 @@ export const GlowDot = forwardRef(function GlowDot(props, _ref) {
     left = "50%",
     size = 10,
     color = "#3ca6a6",
+    title,
     text = "Sample fact text goes here.",
     boxWidth = 300,
     className = "",
@@ -28,11 +29,11 @@ export const GlowDot = forwardRef(function GlowDot(props, _ref) {
     defaultGap = 24,
     viewportPadding = 16,
 
-    // NEW: explicit default offset relative to the dot (pixels)
-  defaultOffsetX = null,
-  defaultOffsetY = null,
+    // explicit default offset
+    defaultOffsetX = null,
+    defaultOffsetY = null,
 
-    // NEW: clamp inside this element’s rect (e.g., sectionRef)
+    // clamp inside this rect
     boundsRef = null,
   } = props
 
@@ -98,14 +99,9 @@ export const GlowDot = forwardRef(function GlowDot(props, _ref) {
 
   // ---------- geometry helpers ----------
   function getBoundsRect() {
-    // prefer explicit boundsRef
     if (boundsRef?.current) return boundsRef.current.getBoundingClientRect()
-
-    // else try offsetParent (closest positioned ancestor)
     const parent = dotRef.current?.offsetParent
     if (parent && parent instanceof HTMLElement) return parent.getBoundingClientRect()
-
-    // fallback to viewport
     return { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight, right: window.innerWidth, bottom: window.innerHeight }
   }
 
@@ -115,7 +111,7 @@ export const GlowDot = forwardRef(function GlowDot(props, _ref) {
     return { cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2 }
   }
 
-  // Clamp offset within bounds rect (NOT global window)
+  // Clamp offset within bounds rect
   function clampOffset(x, y) {
     const dot = getDotViewportCenter()
     if (!dot) return { x, y }
@@ -141,89 +137,86 @@ export const GlowDot = forwardRef(function GlowDot(props, _ref) {
   }
 
   function computeDefaultOffset() {
-  const dot = getDotViewportCenter()
-  if (!dot) return { x: 60, y: 0 }
+    const dot = getDotViewportCenter()
+    if (!dot) return { x: 60, y: 0 }
 
-  // NEW: explicit pixel offsets from the dot take precedence
-  const hasExplicitX = Number.isFinite(defaultOffsetX)
-  const hasExplicitY = Number.isFinite(defaultOffsetY)
-  if (hasExplicitX || hasExplicitY) {
-    const x = hasExplicitX ? defaultOffsetX : 0
-    const y = hasExplicitY ? defaultOffsetY : 0
-    return clampOffset(x, y)
+    const hasExplicitX = Number.isFinite(defaultOffsetX)
+    const hasExplicitY = Number.isFinite(defaultOffsetY)
+    if (hasExplicitX || hasExplicitY) {
+      const x = hasExplicitX ? defaultOffsetX : 0
+      const y = hasExplicitY ? defaultOffsetY : 0
+      return clampOffset(x, y)
+    }
+
+    const bounds = getBoundsRect()
+    const vw = bounds.width ?? (bounds.right - bounds.left)
+    const { cx: dotCx } = dot
+
+    const candidates = {
+      right: { x: defaultGap + boxSize.w / 2 + size / 2, y: 0 },
+      left: { x: -(defaultGap + boxSize.w / 2 + size / 2), y: 0 },
+      top: { x: 0, y: -(defaultGap + boxSize.h / 2 + size / 2) },
+      bottom: { x: 0, y: (defaultGap + boxSize.h / 2 + size / 2) },
+    }
+
+    function visScore(offs) {
+      const { cx, cy } = getDotViewportCenter() || { cx: 0, cy: 0 }
+      const b = getBoundsRect()
+      const Lb = b.left, Tb = b.top, Rb = b.right ?? b.left + b.width, Bb = b.bottom ?? b.top + b.height
+      const { x, y } = clampOffset(offs.x, offs.y)
+      const L = cx + x - boxSize.w / 2, T = cy + y - boxSize.h / 2
+      const R = L + boxSize.w, B = T + boxSize.h
+      const visW = Math.max(0, Math.min(R, Rb) - Math.max(L, Lb))
+      const visH = Math.max(0, Math.min(B, Bb) - Math.max(T, Tb))
+      return (visW * visH) / (boxSize.w * boxSize.h + 1e-6)
+    }
+
+    let chosen
+    if (defaultSide !== "auto") chosen = defaultSide
+    else {
+      const preferRight = dotCx < (bounds.left + vw / 2)
+      const order = preferRight ? ["right", "left", "bottom", "top"] : ["left", "right", "bottom", "top"]
+      chosen = order.reduce((best, s) => (visScore(candidates[s]) > visScore(candidates[best]) ? s : best), order[0])
+    }
+
+    return clampOffset(candidates[chosen].x, candidates[chosen].y)
   }
-
-  // --- existing logic unchanged below ---
-  const bounds = getBoundsRect()
-  const vw = bounds.width ?? (bounds.right - bounds.left)
-  const { cx: dotCx } = dot
-
-  const candidates = {
-    right: { x: defaultGap + boxSize.w / 2 + size / 2, y: 0 },
-    left: { x: -(defaultGap + boxSize.w / 2 + size / 2), y: 0 },
-    top: { x: 0, y: -(defaultGap + boxSize.h / 2 + size / 2) },
-    bottom: { x: 0, y: (defaultGap + boxSize.h / 2 + size / 2) },
-  }
-
-  function visScore(offs) {
-    const { cx, cy } = getDotViewportCenter() || { cx: 0, cy: 0 }
-    const b = getBoundsRect()
-    const Lb = b.left, Tb = b.top, Rb = b.right ?? b.left + b.width, Bb = b.bottom ?? b.top + b.height
-    const { x, y } = clampOffset(offs.x, offs.y)
-    const L = cx + x - boxSize.w / 2, T = cy + y - boxSize.h / 2
-    const R = L + boxSize.w, B = T + boxSize.h
-    const visW = Math.max(0, Math.min(R, Rb) - Math.max(L, Lb))
-    const visH = Math.max(0, Math.min(B, Bb) - Math.max(T, Tb))
-    return (visW * visH) / (boxSize.w * boxSize.h + 1e-6)
-  }
-
-  let chosen
-  if (defaultSide !== "auto") chosen = defaultSide
-  else {
-    const preferRight = dotCx < (bounds.left + vw / 2)
-    const order = preferRight ? ["right", "left", "bottom", "top"] : ["left", "right", "bottom", "top"]
-    chosen = order.reduce((best, s) => (visScore(candidates[s]) > visScore(candidates[best]) ? s : best), order[0])
-  }
-
-  return clampOffset(candidates[chosen].x, candidates[chosen].y)
-}
 
   // initial placement + fade-in
-useLayoutEffect(() => {
-  if (!isPresent || hasUserMoved) return
-  const place = () => {
-    if (boxSize.w === 0 || boxSize.h === 0) return requestAnimationFrame(place)
-    setBoxOffset(prev => {
-      const next = computeDefaultOffset()
-      if (Math.abs(next.x - prev.x) < 0.5 && Math.abs(next.y - prev.y) < 0.5) return prev
-      return next
-    })
-    setPlaced(true)
-    requestAnimationFrame(() => setIsFadingIn(true))
-  }
-  place()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [isPresent, hasUserMoved, boxSize.w, boxSize.h, defaultSide, defaultGap, viewportPadding, boundsRef, defaultOffsetX, defaultOffsetY])
+  useLayoutEffect(() => {
+    if (!isPresent || hasUserMoved) return
+    const place = () => {
+      if (boxSize.w === 0 || boxSize.h === 0) return requestAnimationFrame(place)
+      setBoxOffset(prev => {
+        const next = computeDefaultOffset()
+        if (Math.abs(next.x - prev.x) < 0.5 && Math.abs(next.y - prev.y) < 0.5) return prev
+        return next
+      })
+      setPlaced(true)
+      requestAnimationFrame(() => setIsFadingIn(true))
+    }
+    place()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPresent, hasUserMoved, boxSize.w, boxSize.h, defaultSide, defaultGap, viewportPadding, boundsRef, defaultOffsetX, defaultOffsetY])
 
-// resize reflow if user hasn't moved
-useEffect(() => {
-  if (!isPresent || hasUserMoved) return
-  const onResize = () => {
-    setBoxOffset(prev => {
-      const next = computeDefaultOffset()
-      if (Math.abs(next.x - prev.x) < 0.5 && Math.abs(next.y - prev.y) < 0.5) return prev
-      return next
-    })
-  }
-  window.addEventListener("resize", onResize)
-  window.addEventListener("orientationchange", onResize)
-  return () => {
-    window.removeEventListener("resize", onResize)
-    window.removeEventListener("orientationchange", onResize)
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [isPresent, hasUserMoved, boxSize.w, boxSize.h, defaultSide, defaultGap, viewportPadding, boundsRef, defaultOffsetX, defaultOffsetY])
-
+  // resize reflow if user hasn't moved
+  useEffect(() => {
+    if (!isPresent || hasUserMoved) return
+    const onResize = () => {
+      setBoxOffset(prev => {
+        const next = computeDefaultOffset()
+        if (Math.abs(next.x - prev.x) < 0.5 && Math.abs(next.y - prev.y) < 0.5) return prev
+        return next
+      })
+    }
+    window.addEventListener("resize", onResize)
+    window.addEventListener("orientationchange", onResize)
+    return () => {
+      window.removeEventListener("resize", onResize)
+      window.removeEventListener("orientationchange", onResize)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPresent, hasUserMoved, boxSize.w, boxSize.h, defaultSide, defaultGap, viewportPadding, boundsRef, defaultOffsetX, defaultOffsetY])
 
   // dragging
   const drag = useRef({ on: false, sx: 0, sy: 0, bx: 0, by: 0, frame: null, nx: 0, ny: 0 })
@@ -239,7 +232,7 @@ useEffect(() => {
     setIsSnapping(false)
     setHasUserMoved(true)
     e.preventDefault()
-    e.stopPropagation() // prevent parent scroll/slide handlers from reacting
+    e.stopPropagation()
   }
   function schedule() {
     const d = drag.current
@@ -262,7 +255,7 @@ useEffect(() => {
   }
   function onDragEnd(e) {
     const d = drag.current
-    if (!d.on) return            // ✅ ignore mouseup/touchend for non-active dots
+    if (!d.on) return
     d.on = false
     if (d.frame) { cancelAnimationFrame(d.frame); d.frame = null }
     e?.stopPropagation?.()
@@ -312,6 +305,9 @@ useEffect(() => {
   const hiddenStyle = placed ? {} : { opacity: 0, visibility: "hidden" }
   const peCls = isFadingIn ? "pointer-events-auto" : "pointer-events-none"
   const snapStyle = isSnapping ? { transition: `transform ${snapMs}ms cubic-bezier(0.2, 0.8, 0.2, 1)` } : {}
+
+  // show number when textbox is present (keeps old behavior)
+  const hasBoxNumber = boxNumber !== undefined && boxNumber !== null && String(boxNumber).length > 0
 
   // imperative API
   useImperativeHandle(_ref, () => ({
@@ -376,6 +372,15 @@ useEffect(() => {
         onClick={() => setIsOpen(false)}
       />
 
+      {/* NEW: number badge below the glow dot (replaces number inside textbox) */}
+      {hasBoxNumber && (
+        <div className="absolute left-1/2 top-full -translate-x-1/2 mt-1 z-40">
+          <span className="inline-flex h-6 min-w-6 px-2 items-center justify-center rounded-full bg-[#0c1a22]/85 text-white/90 text-xs font-medium pointer-events-none">
+            {String(boxNumber)}
+          </span>
+        </div>
+      )}
+
       {/* textbox */}
       {isPresent && (
         <div
@@ -391,7 +396,6 @@ useEffect(() => {
           onMouseDown={onDragStart}
           onTouchStart={onDragStart}
         >
-          {/* Keep X absolute, but use a 3-row flow layout so text is below the dot area and above the number */}
           <div className="relative p-4 pt-3 pr-3">
             {/* Close (top-right) */}
             <button
@@ -405,28 +409,22 @@ useEffect(() => {
             >
               <X className="h-4 w-4" />
             </button>
-            <button
-              type="button"
-              aria-label="Textbox Number"
-              className="absolute top-2 left-2 inline-flex h-7 w-7 items-center justify-center rounded-md"
-              style={{ color: "#a9b3b8" }}
-            >
-              {String(boxNumber ?? "")} {/* 0 will show */}
-            </button>
+
+            {/* removed: textbox number */}
 
             {/* Reserve vertical space for the dot above the text */}
-            <div className="h-7" />
+            <div className="h-4" />
 
             {/* Centered text */}
+            <p className="text-center text-base sm:text-lg md:text-xl lg:text-2xl leading-snug text-[#f8da9c]">
+                {title}
+            </p>
             <p className="text-center text-base sm:text-lg md:text-xl lg:text-2xl leading-snug">
               {text}
             </p>
-
           </div>
         </div>
-
       )}
-
     </div>
   )
 })

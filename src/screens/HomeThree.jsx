@@ -2,7 +2,7 @@ import { useRef } from "react"
 import bg from "../assets/HomeThree.png"
 import { GlowDotProvider } from "../components/GlowDotProvider"
 import { PinnedGlowDot } from "../components/PinnedGlowDot"
-import { Home6, Home7, Home8 } from "../data/PageContent"
+import { Home6, Home7, Home8, Home6Title, Home7Title, Home8Title} from "../data/PageContent"
 
 
 export function HomeThree() {
@@ -31,10 +31,12 @@ export function HomeThree() {
                         imageSrc={bg}
                         normX={0.7}
                         normY={0.34}
+                        title = {Home6Title}
                         text= {Home6}
                         dotId="h3-1"
-                        defaultOffsetX = {-100}
-                        defaultOffsetY = {-200}
+                        defaultOffsetX = {-30}
+                        defaultOffsetY = {-300}
+                        boxNumber = "1"
                       />
 
         <PinnedGlowDot
@@ -42,20 +44,24 @@ export function HomeThree() {
                         imageSrc={bg}
                         normX={0.2}
                         normY={0.7}
+                        title = {Home7Title}
                         text= {Home7}
                         dotId="h3-2"
                         defaultOffsetX = {-100}
                         defaultOffsetY = {-100}
+                        boxNumber = "2"
                       />
         <PinnedGlowDot
                         containerRef={sectionRef}
                         imageSrc={bg}
                         normX={0.78}
                         normY={0.66}
+                        title = {Home8Title}
                         text= {Home8}
                         dotId="h3-3"
-                        defaultOffsetX = {-100}
-                        defaultOffsetY = {-100}
+                        defaultOffsetX = {-120}
+                        defaultOffsetY = {-50}
+                        boxNumber = "3"
                       />
 
       </GlowDotProvider>

@@ -265,26 +265,50 @@ export function CardFlip({
 
   // keyboard nav (⇦/⇨ reversed when mirrored)
   useEffect(() => {
-    if (!isIntersecting) return // Only listen for keys when component is visible
+  if (!isIntersecting) return
 
-    const dirFactor = reversed ? -1 : 1
-    const onKey = e => {
-      if (isSweeping) return
+  const dirFactor = reversed ? -1 : 1
+  const onKey = e => {
+    if (isSweeping) return
+    const k = e.key
 
-      if (e.key === "ArrowRight" || e.key === "PageDown") {
-        e.preventDefault(); resetInactivityTimer(); go(+1 * dirFactor)
-      } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
-        e.preventDefault(); resetInactivityTimer(); go(-1 * dirFactor)
-      } else if (e.key === "Enter" || e.key === " ") {
-        const it = displayItems[active]; if (!it) return
-        e.preventDefault()
-        const key = keyFor(order[active], it)
-        setFlipped(s => ({ ...s, [key]: !s[key] }))
-      }
+    if (k === 'ArrowRight' || k === 'PageDown') {
+      e.preventDefault()
+      resetInactivityTimer()
+      go(+1 * dirFactor)
+      return
     }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [active, displayItems, order, isSweeping, reversed, isIntersecting])
+
+    if (k === 'ArrowLeft' || k === 'PageUp') {
+      e.preventDefault()
+      resetInactivityTimer()
+      go(-1 * dirFactor)
+      return
+    }
+
+    if (k === 'Enter' || k === ' ') {
+      const it = displayItems[active]
+      if (!it) return
+      e.preventDefault()
+      const key = keyFor(order[active], it)
+      const nextFlip = !flipped[key]
+      if (nextFlip && !dismissedFlipHint) setDismissedFlipHint(true)
+      setFlipped(s => ({ ...s, [key]: nextFlip }))
+    }
+  }
+
+  window.addEventListener('keydown', onKey)
+  return () => window.removeEventListener('keydown', onKey)
+}, [
+  active,
+  displayItems,
+  order,
+  isSweeping,
+  reversed,
+  isIntersecting,
+  flipped,
+  dismissedFlipHint
+])
 
   // wheel/touch → discrete steps (directions reversed when mirrored)
   useEffect(() => {
@@ -377,15 +401,27 @@ export function CardFlip({
 
   // click/flip
   function onCardClick(displayIndex, it, inZone) {
-    if (isSweeping) return
-    if (!inZone) { goToIndex(displayIndex); resetInactivityTimer(); return }
+  if (isSweeping) return
 
-    const key = keyFor(order[displayIndex], it)
-    const nextFlip = !flipped[key]
-    if (nextFlip && !dismissedFlipHint) setDismissedFlipHint(true)  // first successful flip
-    setFlipped(s => ({ ...s, [key]: nextFlip }))
+  // Clicking another card to navigate: dismiss the arrow hint in the moved direction
+  if (!inZone) {
+    const current = getNearestByAnchor(panelsRef.current, getAnchorXScreen())
+    const movedIndexRight = displayIndex > current
+    const movedVisualRight = reversed ? !movedIndexRight : movedIndexRight
+    if (movedVisualRight) setDismissedRightHint(true)
+    else setDismissedLeftHint(true)
+
+    goToIndex(displayIndex)
+    resetInactivityTimer()
+    return
   }
 
+  // In-zone click = flip; dismiss the flip hint on first successful flip
+  const key = keyFor(order[displayIndex], it)
+  const nextFlip = !flipped[key]
+  if (nextFlip && !dismissedFlipHint) setDismissedFlipHint(true)
+  setFlipped(s => ({ ...s, [key]: nextFlip }))
+}
 
   // idle sweep
   function resetInactivityTimer() {
@@ -784,26 +820,34 @@ export function CardFlip({
 
                         if (hasForwardIndex && !forwardDismissed) {
                           return (
-                            <div
-                              className={`absolute top-1/2 -translate-y-1/2 ${edgePos} opacity-95 transition-opacity duration-300`}
-                              style={{ filter: "drop-shadow(0 0 8px rgba(248,218,156,0.35))" }}
-                              aria-hidden
-                            >
-                              {/* wrapper handles horizontal bounce so vertical centering isn't affected */}
-                              <div
-                                className="pointer-events-none"
-                                style={{
-                                  animation: "cardflip-nudge-x 1.4s ease-in-out infinite",
-                                  // bounce inward (→ when normal, ← when reversed)
-                                  ...(reversed ? { ["--nudge-amp"]: "-5px" } : { ["--nudge-amp"]: "5px" })
-                                }}
-                              >
-                                {reversed
-                                  ? <ChevronLeft className="w-7 h-7 text-[#f8da9c]" strokeWidth={2.5} />
-                                  : <ChevronRight className="w-7 h-7 text-[#f8da9c]" strokeWidth={2.5} />
-                                }
-                              </div>
-                            </div>
+<div
+  className={`group/arrow pointer-events-auto absolute top-1/2 -translate-y-1/2 ${edgePos} opacity-95 transition-opacity duration-300`}
+  style={{ filter: "drop-shadow(0 0 8px rgba(248,218,156,0.35))" }}
+  onPointerDownCapture={e => e.stopPropagation()}
+  aria-hidden
+>
+  {/* wrapper handles horizontal bounce so vertical centering isn't affected */}
+  <div
+    className="pointer-events-none"
+    style={{
+      animation: "cardflip-nudge-x 1.4s ease-in-out infinite",
+      ...(reversed ? { ["--nudge-amp"]: "-5px" } : { ["--nudge-amp"]: "5px" }),
+    }}
+  >
+    {reversed
+      ? <ChevronLeft className="w-7 h-7 text-[#f8da9c]" strokeWidth={2.5} />
+      : <ChevronRight className="w-7 h-7 text-[#f8da9c]" strokeWidth={2.5} />
+    }
+  </div>
+
+  {/* Tooltip in the same style as the flip hint */}
+  <div
+    className={`absolute top-8 ${reversed ? "left-0" : "right-0"} px-2 py-1 rounded bg-black/70 text-[#f8da9c] text-[10px] leading-tight whitespace-nowrap
+      opacity-0 transition-opacity duration-200 pointer-events-none group-hover/arrow:opacity-100`}
+  >
+    Click or use arrow keys
+  </div>
+</div>
                           )
                         }
                         return null

@@ -2,7 +2,7 @@ import { useRef } from "react"
 import bg from "../assets/TechTwo.png"
 import { GlowDotProvider } from "../components/GlowDotProvider"
 import { PinnedGlowDot } from "../components/PinnedGlowDot"
-import { Tech5, Tech6, Tech7, Tech8 } from "../data/PageContent"
+import { Tech6, Tech7, Tech8,Tech9, Tech6Title, Tech7Title, Tech8Title} from "../data/PageContent"
 
 export function TechTwo() {
   const sectionRef = useRef(null)
@@ -26,20 +26,10 @@ export function TechTwo() {
         <PinnedGlowDot
           containerRef={sectionRef}
           imageSrc={bg}
-          normX={0.2}
-          normY={0.7}
-          text= {Tech8}
-          dotId="t2-4"
-          defaultOffsetX = {300}
-          defaultOffsetY = {0}
-          boxNumber = "3"
-        />
-        <PinnedGlowDot
-          containerRef={sectionRef}
-          imageSrc={bg}
           normX={0.41}
           normY={0.1}
-          text= {Tech5}
+          title = {Tech6Title}
+          text= {Tech6}
           dotId="t2-1"
           defaultOffsetX = {-100}
           defaultOffsetY = {200}
@@ -50,7 +40,8 @@ export function TechTwo() {
           imageSrc={bg}
           normX={0.7}
           normY={0.35}
-          text= {Tech6}
+          title = {Tech7Title}
+          text= {Tech7}
           dotId="t2-2"
           defaultOffsetX = {-100}
           defaultOffsetY = {-100}
@@ -61,7 +52,18 @@ export function TechTwo() {
           imageSrc={bg}
           normX={0.2}
           normY={0.7}
-          text= {Tech7}
+          text= {Tech9}
+          dotId="t2-4"
+          defaultOffsetX = {300}
+          defaultOffsetY = {0}
+        />
+        <PinnedGlowDot
+          containerRef={sectionRef}
+          imageSrc={bg}
+          normX={0.2}
+          normY={0.7}
+          title = {Tech8Title}
+          text= {Tech8}
           dotId="t2-3"
           defaultOffsetX = {-100}
           defaultOffsetY = {-100}

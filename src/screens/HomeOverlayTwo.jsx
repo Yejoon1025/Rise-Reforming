@@ -27,7 +27,7 @@ export default function OverlayTwo({ containerRef }) {
                 normY={0.55}
                 text= {Home1}
                 dotId="h1-1"
-                defaultOffsetX = {-400}
+                defaultOffsetX = {-300}
                 defaultOffsetY = {-400}
                 boxNumber = "1"
               />
@@ -49,9 +49,9 @@ export default function OverlayTwo({ containerRef }) {
                 normY={0.6}
                 text= {Home3}
                 dotId="h1-3"
-                defaultOffsetX = {0}
-                defaultOffsetY = {-200}
-                boxNumber = "2"
+                defaultOffsetX = {-100}
+                defaultOffsetY = {0}
+                boxNumber = "3"
               />    
             </GlowDotProvider>
     </div>

@@ -12,6 +12,10 @@ function cleanupNode(node) {
   node.style.opacity = ""
   node.style.willChange = ""
   node.style.filter = ""
+  node.style.backfaceVisibility = ""
+  node.style.transformStyle = ""
+  node.style.contain = ""
+  node.style.isolation = ""
   node.classList.remove(
     "translate-x-0",
     "translate-x-full",
@@ -39,6 +43,16 @@ function afterTransition(node, durationMs, cb) {
   setTimeout(() => done(), Math.max(50, durationMs + 50))
 }
 
+/** Promote a node to its own compositor layer for smoother transitions */
+function promote(node, willChange) {
+  if (!node) return
+  node.style.willChange = willChange
+  node.style.backfaceVisibility = "hidden"
+  node.style.transformStyle = "preserve-3d"
+  node.style.contain = "paint"
+  node.style.isolation = "isolate"
+}
+
 /**
  * Slide IN:
  * - fromRef stays static (behind)
@@ -63,24 +77,24 @@ export function slideIn({
   fromRef.classList.remove("hidden")
   fromRef.style.zIndex = "0"
   fromRef.style.pointerEvents = "none"
-  fromRef.style.transform = "translateX(0)"
+  fromRef.style.transform = "translate3d(0,0,0)"
   fromRef.style.opacity = "1"
 
   // TO comes in from the left on top
   toRef.classList.remove("hidden")
   toRef.style.zIndex = "20"
   toRef.style.pointerEvents = "none"
-  toRef.style.willChange = "transform, opacity"
+  promote(toRef, "transform, opacity")
   toRef.style.transitionProperty = "transform, opacity"
   toRef.style.transitionDuration = `${durationMs}ms`
   toRef.style.transitionTimingFunction = easing
-  toRef.style.transform = `translateX(${distance})` // e.g., -100%
+  toRef.style.transform = `translate3d(${distance},0,0)`
   toRef.style.opacity = fade ? "0" : "1"
 
+  // Force layout, then animate on next frame
   void toRef.getBoundingClientRect()
-
   requestAnimationFrame(() => {
-    toRef.style.transform = "translateX(0)"
+    toRef.style.transform = "translate3d(0,0,0)"
     if (fade) toRef.style.opacity = "1"
   })
 
@@ -117,24 +131,23 @@ export function slideOut({
   toRef.classList.remove("hidden")
   toRef.style.zIndex = "0"
   toRef.style.pointerEvents = "none"
-  toRef.style.transform = "translateX(0)"
+  toRef.style.transform = "translate3d(0,0,0)"
   toRef.style.opacity = "1"
 
   // Animate current page out
   fromRef.classList.remove("hidden")
   fromRef.style.zIndex = "20"
   fromRef.style.pointerEvents = "none"
-  fromRef.style.willChange = "transform, opacity"
+  promote(fromRef, "transform, opacity")
   fromRef.style.transitionProperty = "transform, opacity"
   fromRef.style.transitionDuration = `${durationMs}ms`
   fromRef.style.transitionTimingFunction = easing
-  fromRef.style.transform = "translateX(0)"
+  fromRef.style.transform = "translate3d(0,0,0)"
   fromRef.style.opacity = "1"
 
   void fromRef.getBoundingClientRect()
-
   requestAnimationFrame(() => {
-    fromRef.style.transform = `translateX(${distance})`
+    fromRef.style.transform = `translate3d(${distance},0,0)`
     if (fade) fromRef.style.opacity = "0"
   })
 
@@ -175,19 +188,18 @@ export function zoomOut({
   fromRef.classList.remove("hidden")
   fromRef.style.zIndex = "20"
   fromRef.style.pointerEvents = "none"
-  fromRef.style.willChange = "transform, opacity, filter"
+  promote(fromRef, "transform, opacity, filter")
   fromRef.style.transitionProperty = "transform, opacity, filter"
   fromRef.style.transitionDuration = `${durationMs}ms`
   fromRef.style.transitionTimingFunction = easing
   fromRef.style.transformOrigin = `${focal.x}% ${focal.y}%`
-  fromRef.style.transform = "scale(1)"
+  fromRef.style.transform = "scale3d(1,1,1)"
   fromRef.style.opacity = "1"
   fromRef.style.filter = "blur(0px)"
 
   void fromRef.getBoundingClientRect()
-
   requestAnimationFrame(() => {
-    fromRef.style.transform = `scale(${scaleTo})`
+    fromRef.style.transform = `scale3d(${scaleTo},${scaleTo},1)`
     fromRef.style.opacity = "0"
     fromRef.style.filter = `blur(${blurPx}px)`
   })
@@ -226,12 +238,12 @@ export function zoomIn({
   toRef.classList.remove("hidden")
   toRef.style.zIndex = "20"
   toRef.style.pointerEvents = "none"
-  toRef.style.willChange = "transform, opacity, filter"
+  promote(toRef, "transform, opacity, filter")
   toRef.style.transitionProperty = "transform, opacity, filter"
   toRef.style.transitionDuration = `${durationMs}ms`
   toRef.style.transitionTimingFunction = easing
   toRef.style.transformOrigin = `${focal.x}% ${focal.y}%`
-  toRef.style.transform = `scale(${scaleFrom})`
+  toRef.style.transform = `scale3d(${scaleFrom},${scaleFrom},1)`
   toRef.style.opacity = "0"
   toRef.style.filter = `blur(${blurPx}px)`
 
@@ -239,14 +251,13 @@ export function zoomIn({
   fromRef.classList.remove("hidden")
   fromRef.style.zIndex = "0"
   fromRef.style.pointerEvents = "none"
-  fromRef.style.transform = "scale(1)"
+  fromRef.style.transform = "scale3d(1,1,1)"
   fromRef.style.opacity = "1"
   fromRef.style.filter = "blur(0px)"
 
   void toRef.getBoundingClientRect()
-
   requestAnimationFrame(() => {
-    toRef.style.transform = "scale(1)"
+    toRef.style.transform = "scale3d(1,1,1)"
     toRef.style.opacity = "1"
     toRef.style.filter = "blur(0px)"
   })
@@ -264,7 +275,7 @@ export function crossFade({
   fromRef,
   toRef,
   onDone,
-  durationMs = 800,
+  durationMs = 1300,
   easing = "cubic-bezier(0.22,1,0.36,1)",
   withBlur = false,
   blurPx = 2
@@ -278,10 +289,11 @@ export function crossFade({
   toRef.classList.remove("hidden")
   toRef.style.zIndex = "0"
   toRef.style.pointerEvents = "none"
-  toRef.style.willChange = withBlur ? "opacity, filter" : "opacity"
-  toRef.style.transitionProperty = withBlur ? "opacity, filter" : "opacity"
+  promote(toRef, withBlur ? "opacity, filter, transform" : "opacity, transform")
+  toRef.style.transitionProperty = withBlur ? "opacity, filter, transform" : "opacity, transform"
   toRef.style.transitionDuration = `${durationMs}ms`
   toRef.style.transitionTimingFunction = easing
+  toRef.style.transform = "translate3d(0,0,0)" // ensure a layer
   toRef.style.opacity = "0"
   if (withBlur) toRef.style.filter = `blur(${blurPx}px)`
 
@@ -289,10 +301,11 @@ export function crossFade({
   fromRef.classList.remove("hidden")
   fromRef.style.zIndex = "20"
   fromRef.style.pointerEvents = "none"
-  fromRef.style.willChange = withBlur ? "opacity, filter" : "opacity"
-  fromRef.style.transitionProperty = withBlur ? "opacity, filter" : "opacity"
+  promote(fromRef, withBlur ? "opacity, filter, transform" : "opacity, transform")
+  fromRef.style.transitionProperty = withBlur ? "opacity, filter, transform" : "opacity, transform"
   fromRef.style.transitionDuration = `${durationMs}ms`
   fromRef.style.transitionTimingFunction = easing
+  fromRef.style.transform = "translate3d(0,0,0)" // ensure a layer
   fromRef.style.opacity = "1"
   if (withBlur) fromRef.style.filter = "blur(0px)"
 

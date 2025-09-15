@@ -2,13 +2,13 @@
 import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { CardFlip } from "../components/CardFlip"
-import bg from "../assets/TableBright.png"
+import altBg from "../assets/TableBright.png"
 import Navbar from "../components/Navbar"
 import { ADVISORS, EXEC } from "../data/Profiles"
 import { ChevronDown, ChevronRight } from "lucide-react"
 
 // OPTIONAL: replace with your alternate background image
-import altBg from "../assets/TableDark.png"
+import bg from "../assets/TableDark.png"
 const ALT_BG = altBg // ← default fallback so this compiles; replace with altBg above when ready
 
 export default function Team() {
@@ -125,7 +125,7 @@ export default function Team() {
       >
         {/* --- PAGE 1: HERO --- */}
         <section className="h-screen flex flex-col items-center justify-center relative">
-          <h1 className="text-6xl font-bahnschrift" style={{ color: "#f8da9c" }}>
+          <h1 className="font-bahnschrift text-4xl md:text-6xl text-[#e0e0e0] px-6 text-center leading-tight">
             Our Team
           </h1>
 

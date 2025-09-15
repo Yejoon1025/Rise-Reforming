@@ -2,7 +2,7 @@ import { useRef } from "react"
 import bg from "../assets/HomeTwo.png"
 import { GlowDotProvider } from "../components/GlowDotProvider"
 import { PinnedGlowDot } from "../components/PinnedGlowDot"
-import { Home4, Home5 } from "../data/PageContent"
+import { Home4, Home5, Home4Title} from "../data/PageContent"
 
 export function HomeTwo() {
   const sectionRef = useRef(null)
@@ -28,6 +28,7 @@ export function HomeTwo() {
                         imageSrc={bg}
                         normX={0.49}
                         normY={0.7}
+                        title = {Home4Title}
                         text= {Home4}
                         dotId="h2-1"
                         defaultOffsetX = {-500}

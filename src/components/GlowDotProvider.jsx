@@ -12,6 +12,11 @@ const GlowDotCtx = createContext(null)
  *    It prevents default + stops propagation and opens dots according to `openOnDown`.
  *  - Otherwise, it does nothing and lets the page scroll/keys behave normally.
  *
+ * Added:
+ *  - A 500ms global interaction freeze after:
+ *      (1) all visible dots become open, and
+ *      (2) the first dot in the provider becomes visible.
+ *
  * Props kept (slim):
  *  - threshold: visibility threshold for dots to report as visible (consumed by GlowDot)
  *  - openOnDown: "next" | "all" (default: "next"). Controls how dots open on down actions.
@@ -43,9 +48,37 @@ export function GlowDotProvider({
     return () => { dotsRef.current.delete(id); rerender() }
   }, [])
 
+  // ---------- Global interaction freezes ----------
+  const COMPLETE_OPEN_FREEZE_MS = 100
+  const FIRST_VISIBLE_FREEZE_MS = 500
+  const AFTER_OPEN_MS = 500
+  const globalFreezeUntilRef = useRef(0)
+  const lastAllOpenStateRef = useRef(false)
+  const hadAnyVisibleRef = useRef(false)
+
+  function activateFreeze(ms) {
+    const until = Date.now() + ms
+    if (until > globalFreezeUntilRef.current) globalFreezeUntilRef.current = until
+  }
+  function isFreezeActive() {
+    return Date.now() < globalFreezeUntilRef.current
+  }
+
   const setVisible = useCallback((id, visible) => {
+    // detect first-visible transition (0 -> >0)
+    let before = 0
+    dotsRef.current.forEach(v => { if (v.visible) before++ })
+
     const e = dotsRef.current.get(id)
     if (e) e.visible = !!visible
+
+    let after = 0
+    dotsRef.current.forEach(v => { if (v.visible) after++ })
+
+    if (!hadAnyVisibleRef.current && before === 0 && after > 0) {
+      hadAnyVisibleRef.current = true
+      activateFreeze(FIRST_VISIBLE_FREEZE_MS)
+    }
   }, [])
 
   // ---------- Helpers (internal) ----------
@@ -73,6 +106,7 @@ export function GlowDotProvider({
     const target = entries.find(([, v]) => !v.isOpen?.()) || entries[0]
     if (!target) return false
     target[1].open?.()
+    activateFreeze(AFTER_OPEN_MS)
     return true
   }
 
@@ -83,57 +117,187 @@ export function GlowDotProvider({
     return count > 0
   }
 
-  // ---------- DOWN-only interception ----------
+  // ---------- DOWN-only interception (edge-detect new scrolls) ----------
   const lastTriggerRef = useRef(0)
-  const TRIGGER_COOLDOWN_MS = 220
+  const lastWheelTsRef = useRef(0)
+  const lastDeltaYRef = useRef(0)
+  const isArmedRef = useRef(true) // fire once, then re-arm on up or clear "new scroll" signal
+  const postTriggerLockUntilRef = useRef(0)
 
-  function shouldInterceptDown() {
+  const TRIGGER_COOLDOWN_MS = 220           // hard debounce against accidental double-fires
+  const NEW_GESTURE_GAP_MS = 420            // gap between bursts counts as a new scroll (no full stop required)
+  const JERK_RATIO = 1.8                    // big acceleration spike = likely a new finger flick
+  const JERK_WINDOW_MS = 140                // only consider spikes that happen quickly
+  const POST_TRIGGER_LOCK_MS = 380          // wait window after each trigger, even at page bottom
+
+  function isEditableTarget(target) {
+    if (!target) return false
+    if (target.closest?.('input, textarea, [contenteditable="true"]')) return true
+    return false
+  }
+
+  const shouldInterceptDown = useCallback(() => {
     if (!hasVisibleDots()) return false
     if (areAllVisibleOpen()) return false
     return true
-  }
+  }, [hasVisibleDots, areAllVisibleOpen])
 
-  function tryTriggerOpen() {
+  const tryTriggerOpen = useCallback(() => {
     const now = Date.now()
+    if (now < postTriggerLockUntilRef.current) return
     if (now - lastTriggerRef.current < TRIGGER_COOLDOWN_MS) return
+
     lastTriggerRef.current = now
-    if (openOnDown === "all") openAllVisible()
+    postTriggerLockUntilRef.current = now + POST_TRIGGER_LOCK_MS
+
+    if (openOnDown === 'all') openAllVisible()
     else openNextVisibleUnopened()
-  }
+
+    // If that action resulted in all visible dots being open, freeze interactions briefly.
+    if (hasVisibleDots() && areAllVisibleOpen()) {
+      activateFreeze(COMPLETE_OPEN_FREEZE_MS)
+      lastAllOpenStateRef.current = true
+    }
+  }, [openOnDown, openAllVisible, openNextVisibleUnopened])
 
   useEffect(() => {
+    function markAllOpenTransitionAndMaybeFreeze() {
+      const allOpenNow = hasVisibleDots() && areAllVisibleOpen()
+      if (allOpenNow && !lastAllOpenStateRef.current) activateFreeze(COMPLETE_OPEN_FREEZE_MS)
+      lastAllOpenStateRef.current = allOpenNow
+    }
+
+    function isScrollKey(e) {
+      // Keys that cause scroll in most browsers
+      return e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'PageDown' || e.key === 'PageUp' || e.key === 'Home' || e.key === 'End' || e.key === ' ' || e.code === 'Space'
+    }
+
     function onKey(e) {
       if (e.defaultPrevented) return
-      if (e.key !== "ArrowDown") return
+      if (isEditableTarget(e.target)) return
+
+      // Observe "all-open" transition regardless of key and maybe freeze
+      markAllOpenTransitionAndMaybeFreeze()
+
+      // Global freeze: swallow scroll keys entirely
+      if (isScrollKey(e) && isFreezeActive()) {
+        e.preventDefault()
+        e.stopImmediatePropagation?.()
+        e.stopPropagation()
+        return
+      }
+
+      // Normal behavior for our DOWN-only interception
+      if (e.key !== 'ArrowDown') return
+      if (e.repeat) {
+        e.preventDefault()
+        return
+      }
       if (!shouldInterceptDown()) return
+
       // Steal priority
       e.preventDefault()
       e.stopImmediatePropagation?.()
       e.stopPropagation()
+
+      // Treat keyboard as discrete "new scroll" gestures
+      isArmedRef.current = false
       tryTriggerOpen()
     }
 
     function onWheel(e) {
       if (e.defaultPrevented) return
-      // Only down direction; ignore pinch zoom or horizontal
-      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return
-      if (e.deltaY <= 0) return
-      if (!shouldInterceptDown()) return
+      if (!e.isTrusted) return
+      if (e.ctrlKey) return                         // ignore pinch-zoom
+      if (isEditableTarget(e.target)) return
+
+      // Observe "all-open" transition and maybe freeze
+      markAllOpenTransitionAndMaybeFreeze()
+
+      // Global freeze: swallow ALL wheel movement (both directions)
+      if (isFreezeActive()) {
+        // Keep gesture state "alive" during freeze.
+        const nowTs = e.timeStamp || performance.now()
+        lastWheelTsRef.current = nowTs
+        lastDeltaYRef.current = e.deltaY
+        if (e.deltaY > 0) {
+          // Downward momentum during freeze should DISARM.
+          isArmedRef.current = false
+        } else if (e.deltaY < 0) {
+          // Upward motion can re-arm (user intent to reverse).
+          isArmedRef.current = true
+        }
+
+        e.preventDefault()
+        e.stopImmediatePropagation?.()
+        e.stopPropagation()
+        return
+      }
+
+      const absX = Math.abs(e.deltaX)
+      const absY = Math.abs(e.deltaY)
+      if (absY <= absX) return                      // ignore horizontal-dominant
+
+      const now = e.timeStamp || performance.now()
+      const dt = now - (lastWheelTsRef.current || 0)
+      const prevY = lastDeltaYRef.current || 0
+
+      // Re-arm on any upward movement
+      if (e.deltaY < 0) {
+        isArmedRef.current = true
+        lastWheelTsRef.current = now
+        lastDeltaYRef.current = e.deltaY
+        return
+      }
+
+      // We only care about downward intent from here
+      if (e.deltaY <= 0) {
+        lastWheelTsRef.current = now
+        lastDeltaYRef.current = e.deltaY
+        return
+      }
+
+      // Determine if this down event is a "new" scroll
+      const gapNew = dt > NEW_GESTURE_GAP_MS
+      const jerkNew = dt > 0 && dt < JERK_WINDOW_MS && prevY > 0 && e.deltaY / prevY >= JERK_RATIO
+      const armedNew = isArmedRef.current
+
+      const isNewScroll = armedNew || gapNew || jerkNew
+
+      // If we shouldn't intercept content, still maintain gesture state but don't steal
+      if (!shouldInterceptDown()) {
+        // If user is continuously scrolling down at page bottom, keep it locked after a trigger
+        if (isNewScroll) isArmedRef.current = false
+        lastWheelTsRef.current = now
+        lastDeltaYRef.current = e.deltaY
+        return
+      }
+
       // Steal priority
       e.preventDefault()
       e.stopImmediatePropagation?.()
       e.stopPropagation()
-      tryTriggerOpen()
+
+      // Only one trigger per "new" downward gesture
+      if (isNewScroll) {
+        isArmedRef.current = false
+        tryTriggerOpen()
+      }
+
+      // Update tracking
+      lastWheelTsRef.current = now
+      lastDeltaYRef.current = e.deltaY
     }
 
-    // Capture early, and passive: false so we can preventDefault on wheel
-    window.addEventListener("keydown", onKey, { capture: true })
-    window.addEventListener("wheel", onWheel, { capture: true, passive: false })
+    // Capture early; passive:false required to call preventDefault on wheel
+    window.addEventListener('keydown', onKey, { capture: true })
+    window.addEventListener('wheel', onWheel, { capture: true, passive: false })
+
     return () => {
-      window.removeEventListener("keydown", onKey, { capture: true })
-      window.removeEventListener("wheel", onWheel, { capture: true })
+      window.removeEventListener('keydown', onKey, { capture: true })
+      window.removeEventListener('wheel', onWheel, { capture: true })
     }
-  }, [openOnDown])
+  }, [shouldInterceptDown, tryTriggerOpen])
 
   // ---------- Overlay plumbing (optional) ----------
   const internalBaseRef = useRef(null)

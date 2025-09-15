@@ -77,10 +77,12 @@ export default function App() {
           <Route path="/tech" element={<Tech />} />
           <Route path="/team" element={<Team />} />
           <Route path="/news" element={<News />} />
-          <Route path="*" element={<Navigate to="/home" replace />} />
+          <Route path="*" element={<Temporary />}/>
         </Routes>
 
       </Suspense>
     </div>
   );
 }
+
+//<Route path="*" element={<Navigate to="/home" replace />} />

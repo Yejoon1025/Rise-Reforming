@@ -8,8 +8,7 @@ const NEWS_FADE = "transition-opacity duration-700 ease-out"
 export function TimeLine({
   items = [],
   backgroundUrl,
-  overlayUrl, // ⟵ NEW: cover image over base background
-  overlayOpacity,
+  overlayUrl,
   color = "#3ca6a6",
   progressColor,
   dotSize = 12,
@@ -364,13 +363,11 @@ export function TimeLine({
       {overlayUrl ? (
         <img
           src={overlayUrl}
-          alt=""
+          alt="Bright"
           aria-hidden
-          className={[
-            // fixed so it covers the base background, unaffected by scroll
-            "fixed inset-0 h-screen w-screen object-cover pointer-events-none z-0",
-          ]}
-          style={{ opacity : overlayOpacity}}
+          className={`fixed inset-0 h-screen w-screen object-cover pointer-events-none z-0 transition-opacity duration-700 ease-in-out ${
+          isAtPageTop ? "opacity-0" : "opacity-100"
+        }`}
         />
       ) : null}
 

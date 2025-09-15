@@ -1,9 +1,25 @@
-1. Publish - Done!
-2. Redo Images
-3. Mobile Version
+3. //Mobile Version
 4. SEO Optimization
-
-Couple more pictures to finish
-Fonts and resizings
-Lightings!
 - Any help for next stage?
+
+1. //Redo Images
+2. //Loading Faster
+3. //Font and Resizing
+4. //Navbar overlap on news
+5. //Treatment for trackpad.!! - for mobile.
+6. //Multiple move on timeline
+7. Make the scrolling logic perfect! - news and dots.
+
+---
+
+Done:
+- ///Provider - delay, first open. (Make blurbs not open on scrolling) - Not perfect tho!
+- ///Consistent photos
+- ///Numbers next to dots
+- ///Title be consistent white
+- ///Check links
+- ///Transitions smoother and pause
+- ///Arrow and Flip - //spacebar and click, //hint
+
+//CONTENT: Write the CO2 with a subscript 2.
+//Photo quality.
