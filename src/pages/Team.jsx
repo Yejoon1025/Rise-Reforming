@@ -137,8 +137,8 @@ export default function Team() {
 
         {/* --- PAGE 2: EXECUTIVE TEAM --- */}
         <section className="h-screen w-full flex justify-center relative">
-        <h2 className="absolute top-[20%] font-bahnschrift text-4xl md:text-6xl text-[#f8da9c] px-6 text-center">
-          Executive Team
+        <h2 className="absolute top-[10%] left-[20%] font-bahnschrift text-3xl md:text-5xl text-[#f8da9c] px-6 text-center">
+          Core Team
         </h2>
           <div className="w-full absolute bottom-0 pb-8">
             <CardFlip
@@ -148,7 +148,7 @@ export default function Team() {
               dotSize={12}
               cardWidth={250}
               overlapPx={-20}
-              anchorXRatio={0.3}
+              anchorXRatio={0.2}
               anchorYRatio={0.2}
             />
           </div>
@@ -156,7 +156,7 @@ export default function Team() {
 
         {/* --- PAGE 3: ADVISORS --- */}
         <section className="h-screen w-full flex justify-center relative">
-        <h2 className="absolute top-[20%] font-bahnschrift text-4xl md:text-6xl text-[#f8da9c] px-6 text-center">
+        <h2 className="absolute top-[10%] left-[20%] font-bahnschrift text-3xl md:text-5xl text-[#f8da9c] px-6 text-center">
           Advisors
         </h2>
           <div className="w-full absolute bottom-0 pb-8">
@@ -167,7 +167,7 @@ export default function Team() {
               dotSize={12}
               cardWidth={250}
               overlapPx={-0}
-              anchorXRatio={0.3}
+              anchorXRatio={0.2}
               anchorYRatio={0.2}
               reversed
             />

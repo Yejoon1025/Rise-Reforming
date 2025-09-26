@@ -20,6 +20,7 @@ export const newsTimelineItems = [
     href: "https://college.uchicago.edu/news/student-stories/undergraduate-impact-new-startup-tackles-plastic-waste-disaster ",
     target: "_blank",
     ariaLabel: "Open article",
+    image: { src: "/FirstStep.jpg", alt: "NewsImage" },
   },
   {
     date: "May 2025",

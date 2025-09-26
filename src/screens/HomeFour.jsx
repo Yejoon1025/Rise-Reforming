@@ -15,7 +15,7 @@ export function HomeFour() {
     >
       <div className="h-screen w-full flex justify-center relative">
         <h2 className="absolute top-[20%] font-bahnschrift text-4xl md:text-6xl text-[#f8da9c] px-6 text-center">
-          Future Impact
+          Our Impact
         </h2>
       </div>
       <GlowDotProvider

@@ -12,7 +12,7 @@ export default function TechOverlayTwo({ containerRef }) {
 
     <div className="h-full w-full flex items-center justify-center">
       <h2 className="font-bahnschrift text-4xl md:text-6xl text-[#f8da9c] px-6 text-center z-20">
-        In simple terms, we:
+        In Simple Terms, We:
       </h2>
       <GlowDotProvider
               baseRef={sectionRef}         // ← base element we animate/commit
@@ -36,31 +36,11 @@ export default function TechOverlayTwo({ containerRef }) {
                 imageSrc={bg}
                 normX={0.35}
                 normY={0.3}
-                text= {Tech4}
-                dotId="t1-4"
-                defaultOffsetX = {100}
-                defaultOffsetY = {230}
-              />
-              <PinnedGlowDot
-                containerRef={sectionRef}
-                imageSrc={bg}
-                normX={0.35}
-                normY={0.3}
-                text= {Tech3}
-                dotId="t1-3"
-                defaultOffsetX = {-300}
-                defaultOffsetY = {230}
-              />
-              <PinnedGlowDot
-                containerRef={sectionRef}
-                imageSrc={bg}
-                normX={0.35}
-                normY={0.3}
                 title = {Tech2Title}
                 text= {Tech2}
                 dotId="t1-2"
                 defaultOffsetX = {-100}
-                defaultOffsetY = {-100}
+                defaultOffsetY = {-150}
                 boxNumber = "2"
               />
               <PinnedGlowDot
@@ -70,11 +50,31 @@ export default function TechOverlayTwo({ containerRef }) {
                 normY={0.68}
                 title = {Tech5Title}
                 text= {Tech5}
-                dotId="t1-5"
+                dotId="t1-3"
                 defaultOffsetX = {-100}
                 defaultOffsetY = {-100}
                 boxNumber = "3"
               />    
+              <PinnedGlowDot
+                containerRef={sectionRef}
+                imageSrc={bg}
+                normX={0.35}
+                normY={0.3}
+                text= {Tech3}
+                dotId="t1-4"
+                defaultOffsetX = {-300}
+                defaultOffsetY = {230}
+              />
+              <PinnedGlowDot
+                containerRef={sectionRef}
+                imageSrc={bg}
+                normX={0.35}
+                normY={0.3}
+                text= {Tech4}
+                dotId="t1-5"
+                defaultOffsetX = {100}
+                defaultOffsetY = {230}
+              />
             </GlowDotProvider>
     </div>
   )

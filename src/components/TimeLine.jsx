@@ -2,8 +2,13 @@
 import { useEffect, useRef, useState } from "react"
 import { ChevronUp } from "lucide-react"
 
-// Match this to the fade in news.jsx if different
 const NEWS_FADE = "transition-opacity duration-700 ease-out"
+
+// --- responsive layout knobs ---
+const NARROW_BP = 768                 // < md breakpoint = "narrow"
+const MOBILE_TL_LEFT = 24             // px from left edge for the timeline/dot on narrow screens
+const RIGHT_GUTTER_MOBILE = 16        // px breathing room on the right of the card
+const LINE_W = 1.25                   // px width of the vertical timeline
 
 export function TimeLine({
   items = [],
@@ -30,7 +35,7 @@ export function TimeLine({
   const isAutoScrollingRef = useRef(false)
   const scrollIdleTimerRef = useRef(null)
   const [showToTop, setShowToTop] = useState(false)
-  const [isAtPageTop, setIsAtPageTop] = useState(true) // drives fade in/out
+  const [isAtPageTop, setIsAtPageTop] = useState(true)
   const [isReturningToTop, setIsReturningToTop] = useState(false)
 
   const wheelAccumRef = useRef(0)
@@ -43,6 +48,10 @@ export function TimeLine({
 
   const [firstDownFlash, setFirstDownFlash] = useState(false)
   const firstDownTimerRef = useRef(null)
+
+  // --- track narrow layout ---
+  const [isNarrow, setIsNarrow] = useState(false)
+  const mobileLeftReserve = calcMobilePadLeft(dotSize, MOBILE_TL_LEFT)
 
   const HYSTERESIS_RATIO = 0.22
   const SOFT_ZONE_RATIO = 0.28
@@ -84,7 +93,18 @@ export function TimeLine({
       setLineTop(t)
       setProgressH(Math.max(0, Math.min(half, half - t)))
 
-      setComputedCardW(computeCardWidth(window.innerWidth, cardWidth))
+      const vw = window.innerWidth
+      const narrow = vw < NARROW_BP
+      setIsNarrow(narrow)
+
+      setComputedCardW(
+        computeCardWidth(vw, cardWidth, {
+          isNarrow: narrow,
+          mobileLeftReserve,
+          rightGutter: RIGHT_GUTTER_MOBILE,
+        })
+      )
+
       setShowToTop(window.scrollY > 100)
 
       const nowAtTop = window.scrollY <= TOP_EPS
@@ -117,7 +137,7 @@ export function TimeLine({
       window.removeEventListener("orientationchange", onScrollOrResize)
       if (scrollIdleTimerRef.current) clearTimeout(scrollIdleTimerRef.current)
     }
-  }, [cardWidth, isReturningToTop])
+  }, [cardWidth, isReturningToTop, mobileLeftReserve])
 
   useEffect(() => {
     const onKey = e => {
@@ -146,13 +166,37 @@ export function TimeLine({
     return () => window.removeEventListener("keydown", onKey)
   }, [items.length])
 
+  const EMA_MIN = 40
+  const EMA_TAU_MS = 120
+
+  const emaRef = useRef(0)
+  const lastTsRef = useRef(0)
+
   useEffect(() => {
-    const onWheel = e => {
+    const onWheel = (e) => {
       const timelineRect = sectionRef.current?.getBoundingClientRect()
       if (!timelineRect) return
+
       const inViewport = timelineRect.top < window.innerHeight && timelineRect.bottom > 0
       if (!inViewport) return
+
       if (isAutoScrollingRef.current) { e.preventDefault(); return }
+
+      // --- EMA update ---
+      const absDy = Math.abs(e.deltaY)
+      const ts = e.timeStamp || performance.now()
+      const dt = lastTsRef.current ? (ts - lastTsRef.current) : 16
+      lastTsRef.current = ts
+
+      const alpha = 1 - Math.exp(-dt / EMA_TAU_MS)
+      emaRef.current = (1 - alpha) * emaRef.current + alpha * absDy
+
+      if (emaRef.current <= EMA_MIN) {
+        e.preventDefault()
+        wheelAccumRef.current = 0
+        return
+      }
+      // -------------------
 
       wheelAccumRef.current += e.deltaY
       if (Math.abs(wheelAccumRef.current) < WHEEL_TRIGGER_PX) {
@@ -347,10 +391,15 @@ export function TimeLine({
     return Math.abs(elCenterViewportY(el) - centerY) <= (vh / 2) * SOFT_ZONE_RATIO
   }
 
+  // horizontal positioning classes for the sticky pieces
+  const centerXClasses = "left-1/2 -translate-x-1/2"
+  const mobileLineStyle = { left: MOBILE_TL_LEFT }                     // line’s LEFT edge
+  const mobileDotStyle  = { left: MOBILE_TL_LEFT + LINE_W / 2 }        // dot centered on line
+
   return (
     <section
       ref={sectionRef}
-      className={`relative z-10 w-full ${className}`} // ⟵ ensure content stays above the overlay image
+      className={`relative z-10 w-full ${className}`}
       style={{
         backgroundImage: `url(${backgroundUrl})`,
         backgroundSize: "cover",
@@ -359,40 +408,52 @@ export function TimeLine({
       }}
       aria-label="Timeline"
     >
-      {/* NEW: full-viewport cover image that fades out when leaving the top */}
       {overlayUrl ? (
         <img
           src={overlayUrl}
           alt="Bright"
           aria-hidden
-          className={`fixed inset-0 h-screen w-screen object-cover pointer-events-none z-0 transition-opacity duration-700 ease-in-out ${
-          isAtPageTop ? "opacity-0" : "opacity-100"
-        }`}
+          className={`fixed inset-0 h-screen w-screen object-cover pointer-events-none z-0 transition-opacity duration-700 ease-in-out ${isAtPageTop ? "opacity-0" : "opacity-100"}`}
         />
       ) : null}
 
       {/* Sticky overlay (line + dot) */}
       <div className="pointer-events-none absolute inset-0">
         <div className="sticky top-0 h-screen w-full">
+          {/* base line */}
           <div
-            className="absolute left-1/2 -translate-x-1/2 bg-[#374151]"
-            style={{ top: lineTop, height: `calc(100vh - ${lineTop}px)`, width: "1.25px" }}
-            aria-hidden
-          />
-          <div
-            className="absolute left-1/2 -translate-x-1/2"
+            className={`absolute bg-[#374151] ${isNarrow ? "" : centerXClasses}`}
             style={{
+              ...(isNarrow ? mobileLineStyle : {}),
               top: lineTop,
-              height: progressH,
-              width: "1.25px",
-              background: progColor,
-              boxShadow: `0 0 10px ${hexToRgba(progColor, 0.55)}`,
+              height: `calc(100vh - ${lineTop}px)`,
+              width: `${LINE_W}px`,
             }}
             aria-hidden
           />
+          {/* progress line */}
           <div
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-            style={{ width: dotSize, height: dotSize }}
+  className={`absolute ${isNarrow ? "" : centerXClasses}`}
+  style={{
+    ...(isNarrow ? mobileLineStyle : {}),
+    // Narrow: anchor the segment's BOTTOM at the dot (50%) so it grows upward
+    ...(isNarrow ? { bottom: "50%" } : { top: lineTop }),
+    height: progressH,
+    width: `${LINE_W}px`,
+    background: progColor,
+    boxShadow: `0 0 10px ${hexToRgba(progColor, 0.55)}`,
+  }}
+  aria-hidden
+/>
+
+          {/* dot (centered on the line even on mobile) */}
+          <div
+            className={`absolute top-1/2 -translate-y-1/2 ${isNarrow ? "-translate-x-1/2" : centerXClasses}`}
+            style={{
+              ...(isNarrow ? mobileDotStyle : {}),
+              width: dotSize,
+              height: dotSize,
+            }}
             aria-hidden
           >
             <div
@@ -430,14 +491,20 @@ export function TimeLine({
               className="min-h-screen w-full"
               data-idx={i}
             >
-              <div className="grid min-h-screen w-full grid-cols-2 items-center">
-                <div className="flex justify-end pr-8">
+              {/* md+: keep 2 cols, mobile: stack with left padding to make room for timeline */}
+              <div
+                className={`grid min-h-screen w-full items-center md:grid-cols-2`}
+                style={isNarrow ? { paddingLeft: mobileLeftReserve } : undefined}
+              >
+                {/* Date at left (desktop/tablet only) */}
+                <div className="hidden md:flex justify-end pr-8">
                   <time className={`select-none font-sans text-xl md:text-2xl transition-opacity z-20 ${inZone ? "text-white/80" : "text-white/50"}`}>
                     {it.date}
                   </time>
                 </div>
 
-                <div className="pl-8">
+                {/* Card column; on mobile we put the date INSIDE the card above the title */}
+                <div className="md:pl-8">
                   <CardTag
                     {...cardProps}
                     ref={isFirst ? firstCardRef : null}
@@ -455,6 +522,13 @@ export function TimeLine({
                       WebkitTapHighlightColor: "transparent"
                     }}
                   >
+                    {/* NEW: date inside the card on narrow screens, above title */}
+                    {isNarrow && it.date ? (
+                      <time className="block mb-1 text-sm font-medium tracking-wide text-white/70">
+                        {it.date}
+                      </time>
+                    ) : null}
+
                     {it.title ? (
                       <h3 className="mb-2 font-bahnschrift text-2xl md:text-3xl text-[#f8da9c]">
                         {it.title}
@@ -520,15 +594,27 @@ function hexToRgba(hex, a = 1) {
   const r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16)
   return `rgba(${r},${g},${b},${a})`
 }
-function computeCardWidth(vw, preferred) {
-  const gutter = 32, lineThickness = 2
+
+function computeCardWidth(vw, preferred, opts = {}) {
+  const { isNarrow = false, mobileLeftReserve = 0, rightGutter = 16 } = opts
+  const gutter = 32, lineThickness = LINE_W
+  if (isNarrow) {
+    const maxOneCol = Math.max(220, vw - mobileLeftReserve - rightGutter)
+    return Math.min(preferred, maxOneCol)
+  }
   const maxTwoCol = Math.max(220, (vw / 2) - gutter - lineThickness)
-  const maxOneCol = Math.max(220, vw - (gutter * 2))
-  return vw < 640 ? Math.min(preferred, maxOneCol) : Math.min(preferred, maxTwoCol)
+  return Math.min(preferred, maxTwoCol)
 }
+
+// how much left padding the stacked layout needs so the card clears the haloed dot/line
+function calcMobilePadLeft(dotSize, tlLeftPx) {
+  const halo = 8          // matches -inset-2 in the glowing halo
+  const safety = 12       // extra spacing between dot and card
+  return tlLeftPx + (dotSize / 2) + halo + safety
+}
+
 function isInViewport(el) {
   if (!el) return false
   const r = el.getBoundingClientRect()
   return r.top < window.innerHeight && r.bottom > 0
 }
-

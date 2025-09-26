@@ -12,16 +12,17 @@ import HomeOverlayOne from '../screens/HomeOverlayOne.jsx'
 import HomeOverlayTwo from '../screens/HomeOverlayTwo'
 import * as T from '../components/Transitions.jsx'
 import { ChevronRight } from 'lucide-react'
+import HomeOneLight from '../assets/HomeOneLight.png'
 
 
 const TRANSITIONS = { ...T }
 
 // ---- CODE CONFIG (code-side "menu") ---------------------------------
 const PAGE_TRANSITIONS = {
-  screen1: { down: 'slideIn' },      // Screen1-group → Screen2
-  screen2: { up: 'slideOut', down: 'slideOut' },
-  screen3: { up: 'slideIn', down: 'zoomOut' },
-  screen4: { up: 'zoomIn' }
+  screen1: { down: 'crossFade' },      // Screen1-group → Screen2
+  screen2: { up: 'crossFade', down: 'crossFade' },
+  screen3: { up: 'crossFade', down: 'crossFade' },
+  screen4: { up: 'crossFade' }
 }
 // --- DOTS: labels/targets + per-dot transition you want to use on click ---
 const DOT_SECTIONS = [
@@ -318,10 +319,6 @@ const jumpTo = (target) => {
 // On first overlay (at === 0), return null so ALL dots appear empty.
 const activeDot = at === 0 ? null : at
 
-
-  // Replace with your asset or import it
-  const BRIGHT_IMAGE_SRC = '/HomeOneLight.png'
-
   // Initial visibility
   useEffect(() => {
     s1GroupRef.current?.classList.remove('hidden')
@@ -539,7 +536,7 @@ const activeDot = at === 0 ? null : at
         {/* Bright image for overlay 1 ⇄ 2 */}
         <img
           ref={brightRef}
-          src={BRIGHT_IMAGE_SRC}
+          src={HomeOneLight}
           alt=""
           aria-hidden="true"
           className="fixed inset-0 z-30 h-full w-full object-cover opacity-0 pointer-events-none select-none"

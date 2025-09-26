@@ -33,7 +33,7 @@ export const EXEC = [
       id: "4",
       name: "Konstantina (Nina) Kritikos",
       title: "Founding Process Engineer",
-      photo: { src: "/Nina.jpg", alt: "Nina" },
+      photo: { src: "/Nina.png", alt: "Nina" },
       description: "Chemical Engineering",
       linkedin: " https://www.linkedin.com/in/konstantina-kritikos-99a086186/",
       email: "nina@rise-reforming.com",
@@ -58,7 +58,7 @@ export const ADVISORS = [
     },
     {
       id: "3",
-      name: "Richard Penning, MBA",
+      name: "Richard Penning",
       title: "Business Advisor",
       photo: { src: "/Richard.jpg", alt: "Richard" },
       description: "Former General Manager, Catalysts, UOP LLC; advisor to Nanograf and Numat Technologies",
@@ -69,12 +69,5 @@ export const ADVISORS = [
       title: "Industry Liaison",
       photo: { src: "/Bill.png", alt: "Bill" },
       description: "VP of Operations @ Diversified CPC (largest aerosol propellant manufacturer in North America)",
-    },
-    {
-      id: "5",
-      name: "Mike MacKay",
-      title: "Industry Liaison",
-      photo: { src: "/Mike.jpg", alt: "Mike" },
-      description: "Co-Founder and Managing Director @ DESPRAY Environmental B.V. (modular aerosol recycling company)",
     },
   ]

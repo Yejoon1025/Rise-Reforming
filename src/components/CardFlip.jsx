@@ -1,4 +1,10 @@
-// src/components/CardFlip.jsx
+// src/components/CardFlip.jsx — mobile-friendly tweak
+// • On narrow screens (<640px):
+//    - Dot is centered horizontally
+//    - Exactly one card is shown per screen (full-viewport lane spacing)
+//    - Text remains BELOW the dot (unchanged positioning)
+// • All interactions/behaviors preserved (flip, sweep, keyboard, swipe, etc.)
+
 import { useEffect, useRef, useState, useLayoutEffect } from "react"
 import { ChevronLeft, ChevronRight, RotateCw, Linkedin, Mail } from "lucide-react"
 
@@ -106,7 +112,7 @@ export function CardFlip({
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => setIsIntersecting(entry.isIntersecting),
-      { threshold: 0.1 } // Fire when 10% of the component is visible
+      { threshold: 0.1 }
     )
 
     const currentSection = sectionRef.current
@@ -146,7 +152,11 @@ export function CardFlip({
       const vh = window.innerHeight || 0
       if (!vw || !vh) return
 
-      const leftPx = Math.round(vw * clamp(anchorXRatio, 0.05, 0.5)) // DOM-space anchor
+      // *** MOBILE MODE (one-card view + centered dot) ***
+      const isMobile = vw < 640
+      const effectiveAnchorXRatio = isMobile ? 0.5 : clamp(anchorXRatio, 0.05, 0.5)
+
+      const leftPx = Math.round(vw * effectiveAnchorXRatio) // DOM-space anchor
       const bottomPx = Math.round(vh * clamp(anchorYRatio, 0.15, 0.85))
       const topPx = vh - bottomPx
       setDotLeft(leftPx)
@@ -163,29 +173,27 @@ export function CardFlip({
       const N = items.length
 
       if (N > 1) {
-        // Calculate the default spacing, respecting the original 220px minimum.
+        // Default spacing based on original logic
         const defaultArticleW = cw - overlapPx
         const clampedDefaultArticleW = Math.max(220, defaultArticleW)
 
-        // Check if the default layout fits. The total width depends on the anchor point (`leftPx`)
-        // and the span of all cards. We want the right edge of the last card to be inside the viewport.
-        const SCREEN_EDGE_BUFFER = 48 // A comfortable buffer from the viewport edge
+        // Fit check
+        const SCREEN_EDGE_BUFFER = 48
         const defaultTotalWidth = leftPx + (N - 1) * clampedDefaultArticleW + cw / 2
 
         if (defaultTotalWidth > vw - SCREEN_EDGE_BUFFER) {
-          // It overflows. Calculate the precise articleW needed to fit.
-          // Formula derived from: leftPx + (N - 1) * aw + cw / 2 = vw - SCREEN_EDGE_BUFFER
           const requiredArticleW = (vw - SCREEN_EDGE_BUFFER - leftPx - cw / 2) / (N - 1)
-
-          // Allow cards to become very close to ensure they fit, removing the minimum clamp.
           finalArticleW = requiredArticleW
         } else {
-          // It fits. Use the default clamped spacing.
           finalArticleW = clampedDefaultArticleW
         }
       } else {
-        // For 0 or 1 card, just use the default spacing logic.
         finalArticleW = Math.max(220, cw - overlapPx)
+      }
+
+      // **Mobile override: guarantee exactly one card per viewport**
+      if (isMobile) {
+        finalArticleW = vw // one lane per screen so neighbors never peek in
       }
 
       const aw = Math.round(finalArticleW)

@@ -35,6 +35,13 @@ export const GlowDot = forwardRef(function GlowDot(props, _ref) {
 
     // clamp inside this rect
     boundsRef = null,
+
+    // OPTIONAL: absolute pixel positioning for the DOT center (relative to viewport)
+    // If true and absX/absY are finite, the dot's center will be placed at (absX, absY) in viewport pixels.
+    // This will be converted to the local offsetParent coordinate space.
+    absolutePx = false,
+    absX = null,
+    absY = null,
   } = props
 
   const { register, setVisible, threshold } = useGlowDotController()
@@ -52,6 +59,33 @@ export const GlowDot = forwardRef(function GlowDot(props, _ref) {
   useEffect(() => { boxOffsetRef.current = boxOffset }, [boxOffset])
 
   const [boxSize, setBoxSize] = useState({ w: boxWidth, h: 0 })
+
+  // --- mobile tap support + a11y ---
+const suppressClickRef = useRef(false)
+
+function onDotTouchStart(e) {
+  suppressClickRef.current = true
+  setIsOpen(prev => !prev)
+  e.preventDefault()
+  e.stopPropagation()
+}
+
+function onDotClick(e) {
+  if (suppressClickRef.current) {
+    // eat the synthetic click that follows a touch
+    suppressClickRef.current = false
+    return
+  }
+  //setIsOpen(prev => !prev)
+}
+
+function onDotKeyDown(e) {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault()
+    setIsOpen(prev => !prev)
+  }
+}
+
 
   // snap state
   const [isSnapping, setIsSnapping] = useState(false)
@@ -80,10 +114,10 @@ export const GlowDot = forwardRef(function GlowDot(props, _ref) {
     left: toCssUnit(left),
     width: `${size}px`,
     height: `${size}px`,
-    transform: "translate(-50%, -50%)",
+    transform: "translate(-50%, -50%)", // centers the dot at top/left
   }
 
-  // measure textbox
+  // --- measure textbox ---
   useLayoutEffect(() => {
     if (!boxRef.current) return
     const el = boxRef.current
@@ -102,7 +136,11 @@ export const GlowDot = forwardRef(function GlowDot(props, _ref) {
     if (boundsRef?.current) return boundsRef.current.getBoundingClientRect()
     const parent = dotRef.current?.offsetParent
     if (parent && parent instanceof HTMLElement) return parent.getBoundingClientRect()
-    return { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight, right: window.innerWidth, bottom: window.innerHeight }
+    return {
+      left: 0, top: 0,
+      width: window.innerWidth, height: window.innerHeight,
+      right: window.innerWidth, bottom: window.innerHeight
+    }
   }
 
   function getDotViewportCenter() {
@@ -111,16 +149,38 @@ export const GlowDot = forwardRef(function GlowDot(props, _ref) {
     return { cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2 }
   }
 
-  // Clamp offset within bounds rect
+  function getViewportRect() {
+    const w = window.innerWidth
+    const h = window.innerHeight
+    return { left: 0, top: 0, right: w, bottom: h, width: w, height: h }
+  }
+
+  function intersectRects(a, b) {
+    const left = Math.max(a.left, b.left)
+    const top = Math.max(a.top, b.top)
+    const right = Math.min(a.right ?? a.left + a.width, b.right ?? b.left + b.width)
+    const bottom = Math.min(a.bottom ?? a.top + a.height, b.bottom ?? b.top + b.height)
+    return {
+      left, top, right, bottom,
+      width: Math.max(0, right - left),
+      height: Math.max(0, bottom - top),
+    }
+  }
+
+  // Clamp offset within BOTH the bounds rect and the current viewport
   function clampOffset(x, y) {
     const dot = getDotViewportCenter()
     if (!dot) return { x, y }
 
     const bounds = getBoundsRect()
-    const bxLeft = bounds.left + viewportPadding
-    const bxTop = bounds.top + viewportPadding
-    const bxRight = (bounds.right ?? bounds.left + bounds.width) - viewportPadding
-    const bxBottom = (bounds.bottom ?? bounds.top + bounds.height) - viewportPadding
+    const viewport = getViewportRect()
+    const area = intersectRects(bounds, viewport)
+    if (area.width === 0 || area.height === 0) return { x, y }
+
+    const bxLeft = area.left + viewportPadding
+    const bxTop = area.top + viewportPadding
+    const bxRight = area.right - viewportPadding
+    const bxBottom = area.bottom - viewportPadding
 
     let nx = x, ny = y
     const leftPx = dot.cx + nx - boxSize.w / 2
@@ -306,6 +366,63 @@ export const GlowDot = forwardRef(function GlowDot(props, _ref) {
   const peCls = isFadingIn ? "pointer-events-auto" : "pointer-events-none"
   const snapStyle = isSnapping ? { transition: `transform ${snapMs}ms cubic-bezier(0.2, 0.8, 0.2, 1)` } : {}
 
+  // --- Absolute pixel positioning for the DOT center ---
+  // Convert (absX, absY) in viewport pixels to local coordinates of the dot's offsetParent.
+  const [absLocal, setAbsLocal] = useState(null)
+
+  function computeAbsLocal() {
+    if (!(absolutePx && Number.isFinite(absX) && Number.isFinite(absY))) return null
+    const parent = dotRef.current?.offsetParent
+    if (parent && parent instanceof HTMLElement) {
+      const prect = parent.getBoundingClientRect()
+      return { left: absX - prect.left, top: absY - prect.top }
+    }
+    // No offsetParent: fall back to viewport space (absolute against viewport-like root)
+    return { left: absX, top: absY }
+  }
+
+  useLayoutEffect(() => {
+    if (!(absolutePx && Number.isFinite(absX) && Number.isFinite(absY))) {
+      setAbsLocal(null)
+      return
+    }
+
+    const recalc = () => setAbsLocal(computeAbsLocal())
+    recalc()
+
+    // Recalculate on window resize/scroll...
+    window.addEventListener("resize", recalc)
+    window.addEventListener("scroll", recalc, { passive: true })
+
+    // ...and on scroll of any scrollable ancestors of the offsetParent
+    const scrollables = []
+    const startNode = (dotRef.current?.offsetParent) || dotRef.current?.parentElement
+    const isScrollable = el => {
+      if (!(el instanceof HTMLElement)) return false
+      const s = getComputedStyle(el)
+      return /(auto|scroll)/.test(`${s.overflow}${s.overflowY}${s.overflowX}`)
+    }
+    let n = startNode
+    while (n && n !== document.body && n !== document.documentElement) {
+      if (isScrollable(n)) {
+        n.addEventListener("scroll", recalc, { passive: true })
+        scrollables.push(n)
+      }
+      n = n.parentElement
+    }
+
+    return () => {
+      window.removeEventListener("resize", recalc)
+      window.removeEventListener("scroll", recalc)
+      scrollables.forEach(el => el.removeEventListener("scroll", recalc))
+    }
+  }, [absolutePx, absX, absY])
+
+  // Select which positioning to use for the dot element (centered via translate -50%/-50%)
+  const dotPosStyle = (absolutePx && absLocal)
+    ? { ...posStyle, top: `${absLocal.top}px`, left: `${absLocal.left}px` }
+    : posStyle
+
   // show number when textbox is present (keeps old behavior)
   const hasBoxNumber = boxNumber !== undefined && boxNumber !== null && String(boxNumber).length > 0
 
@@ -343,7 +460,7 @@ export const GlowDot = forwardRef(function GlowDot(props, _ref) {
   }, [dotId, setVisible, threshold])
 
   return (
-    <div ref={dotRef} className={`absolute ${className}`} style={posStyle}>
+    <div ref={dotRef} className={`absolute ${className}`} style={dotPosStyle}>
       {/* connector (behind dot) */}
       {isPresent && (
         <svg
@@ -363,14 +480,18 @@ export const GlowDot = forwardRef(function GlowDot(props, _ref) {
 
       {/* dot */}
       <button
-        type="button"
-        className="absolute inset-0 rounded-full shadow-[0_0_6px_1px_rgba(0,0,0,0.25)] outline-none focus:outline-none z-30"
-        style={coreStyle}
-        aria-label={ariaLabel}
-        onMouseEnter={() => setIsOpen(true)}
-        onFocus={() => setIsOpen(true)}
-        onClick={() => setIsOpen(false)}
-      />
+  type="button"
+  className="absolute inset-0 rounded-full shadow-[0_0_6px_1px_rgba(0,0,0,0.25)] outline-none focus:outline-none z-30"
+  style={coreStyle}
+  aria-label={ariaLabel}
+  aria-expanded={isOpen}
+  onMouseEnter={() => setIsOpen(true)}
+  onFocus={() => setIsOpen(true)}
+  onClick={onDotClick}
+  onTouchStart={onDotTouchStart}
+  onKeyDown={onDotKeyDown}
+/>
+
 
       {/* NEW: number badge below the glow dot (replaces number inside textbox) */}
       {hasBoxNumber && (
@@ -409,15 +530,12 @@ export const GlowDot = forwardRef(function GlowDot(props, _ref) {
             >
               <X className="h-4 w-4" />
             </button>
-
-            {/* removed: textbox number */}
-
             {/* Reserve vertical space for the dot above the text */}
             <div className="h-4" />
 
             {/* Centered text */}
             <p className="text-center text-base sm:text-lg md:text-xl lg:text-2xl leading-snug text-[#f8da9c]">
-                {title}
+              {title}
             </p>
             <p className="text-center text-base sm:text-lg md:text-xl lg:text-2xl leading-snug">
               {text}

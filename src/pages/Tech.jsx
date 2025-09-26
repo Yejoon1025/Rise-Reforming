@@ -10,6 +10,7 @@ import TechOverlayOne from '../screens/TechOverlayOne.jsx'
 import TechOverlayTwo from '../screens/TechOverlayTwo.jsx'
 import * as T from '../components/Transitions.jsx'
 import { ChevronRight } from 'lucide-react'
+import Bright from '../assets/TechOne.png'
 const TRANSITIONS = { ...T }
 
 // ---- CODE CONFIG (code-side "menu") ---------------------------------
@@ -19,8 +20,8 @@ const PAGE_TRANSITIONS = {
 }
 // --- DOTS: labels/targets + per-dot transition you want to use on click ---
 const DOT_SECTIONS = [
-  { id: 1, label: "Chemistry", target: 1 }, // overlay2 (bright)
-  { id: 2, label: 'Process', target: 2 },
+  { id: 1, label: "Chemical Process", target: 1 }, // overlay2 (bright)
+  { id: 2, label: 'Competitive Advantages', target: 2 },
 ]
 
 // Choose what animation should happen when clicking each dot.
@@ -424,7 +425,7 @@ export default function Tecyh() {
         {/* Bright image for overlay 1 ⇄ 2 */}
         <img
           ref={brightRef}
-          src={BRIGHT_IMAGE_SRC}
+          src={Bright}
           alt=""
           aria-hidden="true"
           className="fixed inset-0 z-30 h-full w-full object-cover opacity-0 pointer-events-none select-none"

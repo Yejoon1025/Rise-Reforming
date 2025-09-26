@@ -1,25 +1,31 @@
-3. //Mobile Version
-4. SEO Optimization
-- Any help for next stage?
+- //Navbar overlap
+- //Redo last 3 images
+- //Make scroll delay perfect for //dots and //timeline
+- //Font and resizing - make sure all ok, make sure consistent.
+- //New Changes
+- //Scrolling down from 1
+- //Future Impact -> Our Impact
+- //"That's almost 5 miles in a Ford F-150 avoided per kg of Rise's DME".
+- //Consistent transition
+- //Only remove by X
+- //Make see the dot
+- //Preloading
+- //Automatic Routing
+- //Swipe to navigate to next
+- //Hint and tap on home and tech
+- //Gray Top
+- //Preloading
+- //Text go down on team
+- //Tap to open dots on Mobile
+- //Change subtitle on mobile
+- //Subtitles for teampage on Desktop
+- //Splash and loading logic.
+- //Navbar Overlap
+- //Tech One background, Home One Light - check and delete
+- //Cardflip tap on Mobile
+- //Fix image brighten on team and Timeline
+- //Last Check - Desktop good. Mobile good (formatting a bit)
 
-1. //Redo Images
-2. //Loading Faster
-3. //Font and Resizing
-4. //Navbar overlap on news
-5. //Treatment for trackpad.!! - for mobile.
-6. //Multiple move on timeline
-7. Make the scrolling logic perfect! - news and dots.
-
----
-
-Done:
-- ///Provider - delay, first open. (Make blurbs not open on scrolling) - Not perfect tho!
-- ///Consistent photos
-- ///Numbers next to dots
-- ///Title be consistent white
-- ///Check links
-- ///Transitions smoother and pause
-- ///Arrow and Flip - //spacebar and click, //hint
-
-//CONTENT: Write the CO2 with a subscript 2.
-//Photo quality.
+Later:
+- Tap to down page on Mobile
+- Headshots
