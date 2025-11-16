@@ -87,10 +87,10 @@ export function CardFlipMobile({
   const FOCUS_SCALE = 1.14
   const UNFOCUS_SCALE = 0.9
   const ICONS_HB = 40
-  const IDLE_MS = 1500
-  const SWEEP_UP_MS = 360
-  const FADE_MS = 160
-  const GROW_MS = 360
+  const IDLE_MS = 500
+  const SWEEP_UP_MS = 200
+  const FADE_MS = 200
+  const GROW_MS = 200
   const keyFor = (originalIndex, it) => it.id ?? originalIndex
 
   // timeline visibility & grow flags

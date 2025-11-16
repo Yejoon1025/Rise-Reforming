@@ -37,8 +37,6 @@ export const GlowDot = forwardRef(function GlowDot(props, _ref) {
     boundsRef = null,
 
     // OPTIONAL: absolute pixel positioning for the DOT center (relative to viewport)
-    // If true and absX/absY are finite, the dot's center will be placed at (absX, absY) in viewport pixels.
-    // This will be converted to the local offsetParent coordinate space.
     absolutePx = false,
     absX = null,
     absY = null,
@@ -61,31 +59,30 @@ export const GlowDot = forwardRef(function GlowDot(props, _ref) {
   const [boxSize, setBoxSize] = useState({ w: boxWidth, h: 0 })
 
   // --- mobile tap support + a11y ---
-const suppressClickRef = useRef(false)
+  const suppressClickRef = useRef(false)
 
-function onDotTouchStart(e) {
-  suppressClickRef.current = true
-  setIsOpen(prev => !prev)
-  e.preventDefault()
-  e.stopPropagation()
-}
-
-function onDotClick(e) {
-  if (suppressClickRef.current) {
-    // eat the synthetic click that follows a touch
-    suppressClickRef.current = false
-    return
-  }
-  //setIsOpen(prev => !prev)
-}
-
-function onDotKeyDown(e) {
-  if (e.key === "Enter" || e.key === " ") {
-    e.preventDefault()
+  function onDotTouchStart(e) {
+    suppressClickRef.current = true
     setIsOpen(prev => !prev)
+    e.preventDefault()
+    e.stopPropagation()
   }
-}
 
+  function onDotClick(e) {
+    if (suppressClickRef.current) {
+      // eat the synthetic click that follows a touch
+      suppressClickRef.current = false
+      return
+    }
+    // no toggle on click anymore; open is handled by visibility + hover/focus
+  }
+
+  function onDotKeyDown(e) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault()
+      setIsOpen(prev => !prev)
+    }
+  }
 
   // snap state
   const [isSnapping, setIsSnapping] = useState(false)
@@ -114,7 +111,7 @@ function onDotKeyDown(e) {
     left: toCssUnit(left),
     width: `${size}px`,
     height: `${size}px`,
-    transform: "translate(-50%, -50%)", // centers the dot at top/left
+    transform: "translate(-50%, -50%)",
   }
 
   // --- measure textbox ---
@@ -367,7 +364,6 @@ function onDotKeyDown(e) {
   const snapStyle = isSnapping ? { transition: `transform ${snapMs}ms cubic-bezier(0.2, 0.8, 0.2, 1)` } : {}
 
   // --- Absolute pixel positioning for the DOT center ---
-  // Convert (absX, absY) in viewport pixels to local coordinates of the dot's offsetParent.
   const [absLocal, setAbsLocal] = useState(null)
 
   function computeAbsLocal() {
@@ -377,7 +373,6 @@ function onDotKeyDown(e) {
       const prect = parent.getBoundingClientRect()
       return { left: absX - prect.left, top: absY - prect.top }
     }
-    // No offsetParent: fall back to viewport space (absolute against viewport-like root)
     return { left: absX, top: absY }
   }
 
@@ -390,11 +385,9 @@ function onDotKeyDown(e) {
     const recalc = () => setAbsLocal(computeAbsLocal())
     recalc()
 
-    // Recalculate on window resize/scroll...
     window.addEventListener("resize", recalc)
     window.addEventListener("scroll", recalc, { passive: true })
 
-    // ...and on scroll of any scrollable ancestors of the offsetParent
     const scrollables = []
     const startNode = (dotRef.current?.offsetParent) || dotRef.current?.parentElement
     const isScrollable = el => {
@@ -418,15 +411,12 @@ function onDotKeyDown(e) {
     }
   }, [absolutePx, absX, absY])
 
-  // Select which positioning to use for the dot element (centered via translate -50%/-50%)
   const dotPosStyle = (absolutePx && absLocal)
     ? { ...posStyle, top: `${absLocal.top}px`, left: `${absLocal.left}px` }
     : posStyle
 
-  // show number when textbox is present (keeps old behavior)
   const hasBoxNumber = boxNumber !== undefined && boxNumber !== null && String(boxNumber).length > 0
 
-  // imperative API
   useImperativeHandle(_ref, () => ({
     open: () => setIsOpen(true),
     close: () => setIsOpen(false),
@@ -445,13 +435,14 @@ function onDotKeyDown(e) {
     return unregister
   }, [dotId, register])
 
-  // visibility report
+  // visibility report + local visibility flag for auto-open
   useEffect(() => {
     if (!dotRef.current || !dotId) return
     const obs = new IntersectionObserver(
       entries => {
         const entry = entries[0]
-        setVisible(dotId, entry.isIntersecting && entry.intersectionRatio >= threshold)
+        const visible = entry.isIntersecting && entry.intersectionRatio >= threshold
+        setVisible(dotId, visible)
       },
       { threshold }
     )
@@ -480,20 +471,19 @@ function onDotKeyDown(e) {
 
       {/* dot */}
       <button
-  type="button"
-  className="absolute inset-0 rounded-full shadow-[0_0_6px_1px_rgba(0,0,0,0.25)] outline-none focus:outline-none z-30"
-  style={coreStyle}
-  aria-label={ariaLabel}
-  aria-expanded={isOpen}
-  onMouseEnter={() => setIsOpen(true)}
-  onFocus={() => setIsOpen(true)}
-  onClick={onDotClick}
-  onTouchStart={onDotTouchStart}
-  onKeyDown={onDotKeyDown}
-/>
+        type="button"
+        className="absolute inset-0 rounded-full shadow-[0_0_6px_1px_rgba(0,0,0,0.25)] outline-none focus:outline-none z-30"
+        style={coreStyle}
+        aria-label={ariaLabel}
+        aria-expanded={isOpen}
+        onMouseEnter={() => setIsOpen(true)}
+        onFocus={() => setIsOpen(true)}
+        onClick={onDotClick}
+        onTouchStart={onDotTouchStart}
+        onKeyDown={onDotKeyDown}
+      />
 
-
-      {/* NEW: number badge below the glow dot (replaces number inside textbox) */}
+      {/* number badge */}
       {hasBoxNumber && (
         <div className="absolute left-1/2 top-full -translate-x-1/2 mt-1 z-40">
           <span className="inline-flex h-6 min-w-6 px-2 items-center justify-center rounded-full bg-[#0c1a22]/85 text-white/90 text-xs font-medium pointer-events-none">
@@ -518,7 +508,7 @@ function onDotKeyDown(e) {
           onTouchStart={onDragStart}
         >
           <div className="relative p-4 pt-3 pr-3">
-            {/* Close (top-right) */}
+            {/* Close */}
             <button
               type="button"
               aria-label="Close textbox"
@@ -530,10 +520,9 @@ function onDotKeyDown(e) {
             >
               <X className="h-4 w-4" />
             </button>
-            {/* Reserve vertical space for the dot above the text */}
+
             <div className="h-4" />
 
-            {/* Centered text */}
             <p className="text-center text-base sm:text-lg md:text-xl lg:text-2xl leading-snug text-[#f8da9c]">
               {title}
             </p>

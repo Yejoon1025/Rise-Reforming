@@ -331,7 +331,6 @@ export default function Test() {
                 overlapPx={-20}
                 anchorXRatio={0.5}
                 anchorYRatio={0.2}
-                reversed = {true}
               />
               <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-20 text-[#f8da9c] text-xl font-bahnschrift">
               Advisors

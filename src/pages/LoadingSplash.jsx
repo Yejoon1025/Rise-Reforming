@@ -10,7 +10,7 @@ export default function LoadingSplash({ onDone }) {
     () => ({
       FLAME_H: "h-[116px] sm:h-[128px] md:h-[140px] lg:h-[156px] xl:h-[168px]",
       TEXT_H:  "h-[72px]  sm:h-[78px]  md:h-[86px]  lg:h-[94px]  xl:h-[102px]",
-      OVERLAP: 65,
+      OVERLAP: 50,
       BG_SHIFT_PX: 0,
       EXIT_MS: 1200, // slower & smoother
     }),
@@ -21,10 +21,10 @@ export default function LoadingSplash({ onDone }) {
   const t = useMemo(
     () => ({
       flameIn: 700,
-      brighten: 1600,
+      brighten: 800,
       slideLeft: 600,
       wordmarkIn: 800,
-      hold: 2200,
+      hold: 1500,
     }),
     []
   )

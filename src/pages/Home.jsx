@@ -11,7 +11,7 @@ import { HomeFour } from '../screens/HomeFour.jsx'
 import HomeOverlayOne from '../screens/HomeOverlayOne.jsx'
 import HomeOverlayTwo from '../screens/HomeOverlayTwo'
 import * as T from '../components/Transitions.jsx'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, ChevronDown, ChevronUp } from 'lucide-react'
 import HomeOneLight from '../assets/HomeOneLight.png'
 
 
@@ -461,12 +461,6 @@ const activeDot = at === 0 ? null : at
 
   // Navigation input handlers (respect the single-flight lock)
   useEffect(() => {
-    function onWheel(e) {
-      if (isAnimating) return
-      if (Math.abs(e.deltaY) < 20) return
-      if (e.deltaY > 0) goDown()
-      else goUp()
-    }
     function onKeyNav(e) {
       if (isAnimating) return
       if (e.key === 'ArrowDown' || e.key === 'PageDown') { e.preventDefault(); goDown() }
@@ -474,10 +468,8 @@ const activeDot = at === 0 ? null : at
       if (e.key === 'ArrowRight' && at === 4) {e.preventDefault(); navigate('/tech')}
     }
     const el = containerRef.current
-    el?.addEventListener('wheel', onWheel, { passive: true })
     window.addEventListener('keydown', onKeyNav, { passive: false })
     return () => {
-      el?.removeEventListener('wheel', onWheel)
       window.removeEventListener('keydown', onKeyNav)
     }
   }, [goDown, goUp, isAnimating])
@@ -595,11 +587,44 @@ const activeDot = at === 0 ? null : at
   })}
 </div>
 
-{/* --- NEXT ARROW (visible only on 4th screen) --- */}
-<div
-        className={`absolute bottom-8 right-8 z-[60] group transition-opacity duration-700 flex items-center ${
-          at === 4 ? "opacity-100" : "opacity-0 pointer-events-none"
-        }`}
+
+      <div
+        className={`absolute bottom-16 right-5 z-[60] group transition-opacity duration-700 flex items-center ${at === 0 ? "opacity-0 pointer-events-none" : "opacity-100"
+          }`}
+      >
+
+        {/* Chevron icon button */}
+        <button
+          onClick={() => goUp()}
+          aria-label="Up"
+          className="p-2 hover:opacity-80 transition-opacity"
+        >
+          <ChevronUp className="text-white" size={32} />
+
+        </button>
+      </div>
+
+
+      <div
+        className={`absolute bottom-8 right-5 z-[60] group transition-opacity duration-700 flex items-center ${at === 4 ? "opacity-0 pointer-events-none" : "opacity-100"
+          }`}
+      >
+
+        {/* Chevron icon button */}
+        <button
+          onClick={() => goDown()}
+          aria-label="Down"
+          className="p-2 hover:opacity-80 transition-opacity"
+        >
+          <ChevronDown className="text-white" size={32} />
+
+        </button>
+      </div>
+
+      {/* --- NEXT ARROW (visible only on 4th screen) --- */}
+      <div
+        className={`absolute bottom-8 right-5 z-[60] group transition-opacity duration-700 flex items-center ${at === 4 ? "opacity-100" : "opacity-0 pointer-events-none"
+          }`}
       >
         {/* Hover label to the left, styled like dot labels */}
         <span className="absolute right-12 opacity-0 group-hover:opacity-100 transition-opacity text-sm text-white whitespace-nowrap">
@@ -608,22 +633,22 @@ const activeDot = at === 0 ? null : at
 
         {/* Chevron icon button */}
         <button
-      onClick={() => navigate("/tech")}
-      aria-label="Continue"
-      className="p-2 hover:opacity-80 transition-opacity"
-    >
-      <ChevronRight className="text-white animate-bounce-x" size={32} />
+          onClick={() => navigate("/tech")}
+          aria-label="Continue"
+          className="p-2 hover:opacity-80 transition-opacity"
+        >
+          <ChevronRight className="text-white" size={32} />
 
-    </button>
+        </button>
       </div>
-{/* --- HINT TEXT (only on second overlay) --- */}
-{at === 1 && showHint && (
-  <div
-    className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[70] text-white/70 text-sm md:text-base animate-pulse select-none pointer-events-auto"
-  >
-    ↓ or hover to reveal dots
-  </div>
-)}
+      {/* --- HINT TEXT (only on second overlay) --- */}
+      {at === 0 && showHint && (
+        <div
+          className="absolute bottom-11 right-18 z-[70] text-white/70 text-sm md:text-base animate-pulse select-none pointer-events-auto"
+        >
+          Click or use arrow keys to navigate:
+        </div>
+      )}
     </div>
   )
 }

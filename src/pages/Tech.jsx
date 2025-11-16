@@ -9,7 +9,7 @@ import { TechTwo } from '../screens/TechTwo.jsx'
 import TechOverlayOne from '../screens/TechOverlayOne.jsx'
 import TechOverlayTwo from '../screens/TechOverlayTwo.jsx'
 import * as T from '../components/Transitions.jsx'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, ChevronUp, ChevronDown } from 'lucide-react'
 import Bright from '../assets/TechOne.png'
 const TRANSITIONS = { ...T }
 
@@ -361,12 +361,6 @@ export default function Tecyh() {
 
   // Navigation input handlers (respect the single-flight lock)
   useEffect(() => {
-    function onWheel(e) {
-      if (isAnimating) return
-      if (Math.abs(e.deltaY) < 20) return
-      if (e.deltaY > 0) goDown()
-      else goUp()
-    }
     function onKeyNav(e) {
       if (isAnimating) return
       if (e.key === 'ArrowDown' || e.key === 'PageDown') { e.preventDefault(); goDown() }
@@ -374,10 +368,8 @@ export default function Tecyh() {
       if (e.key === 'ArrowRight' && at === 2) {e.preventDefault(); navigate('/team')}
     }
     const el = containerRef.current
-    el?.addEventListener('wheel', onWheel, { passive: true })
     window.addEventListener('keydown', onKeyNav, { passive: false })
     return () => {
-      el?.removeEventListener('wheel', onWheel)
       window.removeEventListener('keydown', onKeyNav)
     }
   }, [goDown, goUp, isAnimating])
@@ -478,9 +470,45 @@ export default function Tecyh() {
           )
         })}
       </div>
+
+
+      
+        <div
+        className={`absolute bottom-16 right-5 z-[60] group transition-opacity duration-700 flex items-center ${at === 0 ? "opacity-0 pointer-events-none" : "opacity-100"
+          }`}
+      >
+
+        {/* Chevron icon button */}
+        <button
+          onClick={() => goUp()}
+          aria-label="Up"
+          className="p-2 hover:opacity-80 transition-opacity"
+        >
+          <ChevronUp className="text-white" size={32} />
+
+        </button>
+      </div>
+
+
+      <div
+        className={`absolute bottom-8 right-5 z-[60] group transition-opacity duration-700 flex items-center ${at === 2 ? "opacity-0 pointer-events-none" : "opacity-100"
+          }`}
+      >
+
+        {/* Chevron icon button */}
+        <button
+          onClick={() => goDown()}
+          aria-label="Down"
+          className="p-2 hover:opacity-80 transition-opacity"
+        >
+          <ChevronDown className="text-white" size={32} />
+
+        </button>
+      </div>
+
       {/* --- NEXT ARROW (visible only on 2nd screen) --- */}
 <div
-        className={`absolute bottom-8 right-8 z-[60] group transition-opacity duration-700 flex items-center ${
+        className={`absolute bottom-8 right-5 z-[60] group transition-opacity duration-700 flex items-center ${
           at === 2 ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       >
@@ -491,13 +519,13 @@ export default function Tecyh() {
 
         {/* Chevron icon button */}
         <button
-      onClick={() => navigate("/team")}
-      aria-label="Continue"
-      className="p-2 hover:opacity-80 transition-opacity"
-    >
-      <ChevronRight className="text-white animate-bounce-x" size={32} />
+          onClick={() => navigate("/tech")}
+          aria-label="Continue"
+          className="p-2 hover:opacity-80 transition-opacity"
+        >
+          <ChevronRight className="text-white" size={32} />
 
-    </button>
+        </button>
       </div>
     </div>
   )

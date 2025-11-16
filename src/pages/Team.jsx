@@ -5,7 +5,7 @@ import { CardFlip } from "../components/CardFlip"
 import altBg from "../assets/TableBright.png"
 import Navbar from "../components/Navbar"
 import { ADVISORS, EXEC } from "../data/Profiles"
-import { ChevronDown, ChevronRight } from "lucide-react"
+import { ChevronDown, ChevronRight, ChevronUp } from "lucide-react"
 
 // OPTIONAL: replace with your alternate background image
 import bg from "../assets/TableDark.png"
@@ -51,22 +51,6 @@ export default function Team() {
   // Handle scroll wheel or arrow keys
   useEffect(() => {
     const handleInput = (e) => {
-      if (locked) {
-        if (e.type === "wheel") e.preventDefault()
-        return
-      }
-
-      if (e.type === "wheel") {
-        if (Math.abs(e.deltaY) < SCROLL_THRESHOLD) return
-        if (page < MAX_PAGE && e.deltaY > 0) {
-          e.preventDefault()
-          goToPage(page + 1)
-        } else if (page > 0 && e.deltaY < 0) {
-          e.preventDefault()
-          goToPage(page - 1)
-        }
-        return
-      }
 
       if (e.type === "keydown") {
         if (page < MAX_PAGE && (e.key === "ArrowDown" || e.key === "PageDown")) {
@@ -75,21 +59,22 @@ export default function Team() {
         } else if (page > 0 && (e.key === "ArrowUp" || e.key === "PageUp")) {
           e.preventDefault()
           goToPage(page - 1)
+        } else if (page == MAX_PAGE && (e.key === "ArrowRight")) {
+          e.preventDefault()
+          navigate("/news")
         }
       }
     }
 
-    window.addEventListener("wheel", handleInput, { passive: false })
     window.addEventListener("keydown", handleInput)
     return () => {
-      window.removeEventListener("wheel", handleInput)
       window.removeEventListener("keydown", handleInput)
     }
   }, [page, locked])
 
   // Dot navigation config (hero is not a dot)
   const sections = [
-    { id: 1, label: "Executive Team" },
+    { id: 1, label: "Core Team" },
     { id: 2, label: "Advisors" },
   ]
   const lastDotId = sections[sections.length - 1].id
@@ -128,17 +113,12 @@ export default function Team() {
           <h1 className="font-bahnschrift text-4xl md:text-6xl text-[#e0e0e0] px-6 text-center leading-tight">
             Our Team
           </h1>
-
-          {/* Down arrow */}
-          <button onClick={() => goToPage(1)} className="absolute bottom-12 animate-bounce">
-            <ChevronDown size={40} style={{ color: "#f8da9c" }} />
-          </button>
         </section>
 
         {/* --- PAGE 2: EXECUTIVE TEAM --- */}
         <section className="h-screen w-full flex justify-center relative">
-        <h2 className="absolute top-[10%] left-[20%] font-bahnschrift text-3xl md:text-5xl text-[#f8da9c] px-6 text-center">
-          Core Team
+        <h2 className="absolute top-[20%] font-bahnschrift text-2xl md:text-4xl text-[#f8da9c] px-6 text-center">
+          Core Team:
         </h2>
           <div className="w-full absolute bottom-0 pb-8">
             <CardFlip
@@ -148,16 +128,21 @@ export default function Team() {
               dotSize={12}
               cardWidth={250}
               overlapPx={-20}
-              anchorXRatio={0.2}
-              anchorYRatio={0.2}
+              anchorXRatio={0.35}
+              anchorYRatio={0.10}
             />
           </div>
+          <div
+          className="absolute bottom-20 z-[70] text-white/70 text-sm md:text-base animate-pulse select-none pointer-events-auto"
+        >
+          Click on anyone to learn more!
+        </div>
         </section>
 
         {/* --- PAGE 3: ADVISORS --- */}
         <section className="h-screen w-full flex justify-center relative">
-        <h2 className="absolute top-[10%] left-[20%] font-bahnschrift text-3xl md:text-5xl text-[#f8da9c] px-6 text-center">
-          Advisors
+        <h2 className="absolute top-[20%] font-bahnschrift text-2xl md:text-4xl text-[#f8da9c] px-6 text-center">
+          Advisors:
         </h2>
           <div className="w-full absolute bottom-0 pb-8">
             <CardFlip
@@ -166,10 +151,9 @@ export default function Team() {
               progressColor="#3ca6a6"
               dotSize={12}
               cardWidth={250}
-              overlapPx={-0}
-              anchorXRatio={0.2}
-              anchorYRatio={0.2}
-              reversed
+              overlapPx={-20}
+              anchorXRatio={0.35}
+              anchorYRatio={0.10}
             />
           </div>
         </section>
@@ -195,23 +179,58 @@ export default function Team() {
           </div>
         ))}
       </div>
+<div
+        className={`absolute bottom-16 right-5 z-[60] group transition-opacity duration-700 flex items-center ${at === 0 ? "opacity-0 pointer-events-none" : "opacity-100"
+          }`}
+      >
 
-      {/* --- NEXT ARROW (now fades in on the 2nd dot) --- */}
+        {/* Chevron icon button */}
+        <button
+          onClick={() => goToPage(page - 1)}
+          aria-label="Up"
+          className="p-2 hover:opacity-80 transition-opacity"
+        >
+          <ChevronUp className="text-white" size={32} />
+
+        </button>
+      </div>
+
+
       <div
-        className={`absolute bottom-8 right-8 z-[60] group transition-opacity duration-700 flex items-center ${
-          at === lastDotId ? "opacity-100" : "opacity-0 pointer-events-none"
+        className={`absolute bottom-8 right-5 z-[60] group transition-opacity duration-700 flex items-center ${at === 2 ? "opacity-0 pointer-events-none" : "opacity-100"
+          }`}
+      >
+
+        {/* Chevron icon button */}
+        <button
+          onClick={() => goToPage(page + 1)}
+          aria-label="Down"
+          className="p-2 hover:opacity-80 transition-opacity"
+        >
+          <ChevronDown className="text-white" size={32} />
+
+        </button>
+      </div>
+
+      {/* --- NEXT ARROW (visible only on 2nd screen) --- */}
+<div
+        className={`absolute bottom-8 right-5 z-[60] group transition-opacity duration-700 flex items-center ${
+          at === 2 ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       >
+        {/* Hover label to the left, styled like dot labels */}
         <span className="absolute right-12 opacity-0 group-hover:opacity-100 transition-opacity text-sm text-white whitespace-nowrap">
           Learn more about our journey
         </span>
 
+        {/* Chevron icon button */}
         <button
           onClick={() => navigate("/news")}
           aria-label="Continue"
           className="p-2 hover:opacity-80 transition-opacity"
         >
-          <ChevronRight className="text-white animate-bounce-x" size={32} />
+          <ChevronRight className="text-white" size={32} />
+
         </button>
       </div>
     </div>

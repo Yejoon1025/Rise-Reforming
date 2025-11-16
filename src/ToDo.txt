@@ -1,31 +1,34 @@
-- //Navbar overlap
-- //Redo last 3 images
-- //Make scroll delay perfect for //dots and //timeline
-- //Font and resizing - make sure all ok, make sure consistent.
-- //New Changes
-- //Scrolling down from 1
-- //Future Impact -> Our Impact
-- //"That's almost 5 miles in a Ford F-150 avoided per kg of Rise's DME".
-- //Consistent transition
-- //Only remove by X
-- //Make see the dot
-- //Preloading
-- //Automatic Routing
-- //Swipe to navigate to next
-- //Hint and tap on home and tech
-- //Gray Top
-- //Preloading
-- //Text go down on team
-- //Tap to open dots on Mobile
-- //Change subtitle on mobile
-- //Subtitles for teampage on Desktop
-- //Splash and loading logic.
-- //Navbar Overlap
-- //Tech One background, Home One Light - check and delete
-- //Cardflip tap on Mobile
-- //Fix image brighten on team and Timeline
-- //Last Check - Desktop good. Mobile good (formatting a bit)
+Gesture: More robust and obvious, more uniform
+//1. Get rid of opening mechanism for textboxes - auto open - all at once?
+//1. Get rid of scrolling, change to arrow and button - On computer
 
-Later:
-- Tap to down page on Mobile
-- Headshots
+Team page - get rid of page, add buttons
+
+
+Robustness and smoothness, can still add!
+
+Card - Click only, Arrows to move.
+Get rid of scroll
+
+
+News - get rid of scroll and add buttons
+
+
+2. 
+3. Consistent keys, instructions clearer
+4. Spam buffer
+
+Phone: Just down gesture too?
+Cards and News remake - Make more robust
+6. Looks - Keeping menu, Phone fonts, Team Page, Advisor Logos
+2. Aesthetics - Keeping menu on news page, Phone fonts, Team Page - Need to think about how to make it prettier, Advisor Logos
+Later: Favicon, Cards auto flip, Swipe Buffer, Update method (site data)
+
+
+---
+
+Content:
+1. Headshot, Pictures
+2. Bios
+3. News Link
+4. "9 LOIs, 4 pilot site/supply MOUs, and 1 pilot purchase agreement signed"

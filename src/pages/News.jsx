@@ -3,6 +3,7 @@ import bg from "../assets/NewsDark.png"
 import overlayBg from "../assets/NewLight.png"
 import { TimeLine } from "../components/TimeLine"
 import Navbar from "../components/Navbar"
+import MobileNavbar from "../components/MobileNavbar"
 import { newsTimelineItems } from "../data/NewsItems"
 
 export default function News() {

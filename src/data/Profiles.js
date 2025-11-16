@@ -48,6 +48,8 @@ export const ADVISORS = [
       title: "Scientific Advisor",
       photo: { src: "/Jack.jpg", alt: "Jack" },
       description: "Former Program Director @ DOE ARPA-E, Former CTO @ Gas Technology Institute (GTI)",
+      linkedin: "https://www.linkedin.com/in/jacklewnard/",
+      email: "jlewnard@gmail.com",
     },
     {
       id: "2",
@@ -55,6 +57,7 @@ export const ADVISORS = [
       title: "Scientific Advisor",
       photo: { src: "/Mark.png", alt: "Mark" },
       description: "University of Chicago Molecular Engineering Senior Instructional Professor & Director of Undergraduate Studies",
+      email: "stoykovich@uchicago.edu",
     },
     {
       id: "3",
@@ -62,6 +65,8 @@ export const ADVISORS = [
       title: "Business Advisor",
       photo: { src: "/Richard.jpg", alt: "Richard" },
       description: "Former General Manager, Catalysts, UOP LLC; advisor to Nanograf and Numat Technologies",
+      linkedin: "https://www.linkedin.com/in/richard-penning-57007b1/",
+      email: "penning.richard@gmail.com",
     },
     {
       id: "4",
@@ -69,5 +74,7 @@ export const ADVISORS = [
       title: "Industry Liaison",
       photo: { src: "/Bill.png", alt: "Bill" },
       description: "VP of Operations @ Diversified CPC (largest aerosol propellant manufacturer in North America)",
+      linkedin: "https://www.linkedin.com/in/bill-frauenheim-1320744/",
+      email: "bfrauenheim@diversifiedcpc.com",
     },
   ]

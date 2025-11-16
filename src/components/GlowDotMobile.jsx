@@ -10,12 +10,12 @@ import { useGlowDotController } from "../components/GlowDotMobileProvider"
 import { X } from "lucide-react"
 
 /**
- * GlowDotCentered (viewport-centered textbox)
+ * GlowDotMobile (viewport-centered textbox for mobile)
  * - Textbox is rendered to document.body via a portal and fixed-centered in the viewport
- * - Not draggable
- * - All other behavior preserved (controller API, a11y, visibility, number badge, absolute dot pos)
+ * - Auto-opens shortly after its dot becomes visible (so the dot is seen first)
+ * - User can close it; auto-open stays disabled until the dot leaves viewport and re-enters
  */
-export const GlowDotMobile= forwardRef(function GlowDotMobile(props, _ref) {
+export const GlowDotMobile = forwardRef(function GlowDotMobile(props, _ref) {
   const {
     top = "50%",
     left = "50%",
@@ -43,25 +43,47 @@ export const GlowDotMobile= forwardRef(function GlowDotMobile(props, _ref) {
   const [isPresent, setIsPresent] = useState(false)
   const [isFadingIn, setIsFadingIn] = useState(false)
 
+  // Whether auto-open is currently disabled because the user manually closed this dot
+  const [autoOpenDisabled, setAutoOpenDisabled] = useState(false)
+  const autoOpenTimeoutRef = useRef(null)
+
   // --- mobile tap support + a11y ---
   const suppressClickRef = useRef(false)
+
+  function userToggleOpen() {
+    setIsOpen(prev => {
+      const next = !prev
+      // If we are closing via a user interaction, disable auto-open while visible
+      if (prev && !next) {
+        setAutoOpenDisabled(true)
+        if (autoOpenTimeoutRef.current) {
+          clearTimeout(autoOpenTimeoutRef.current)
+          autoOpenTimeoutRef.current = null
+        }
+      }
+      return next
+    })
+  }
+
   function onDotTouchStart(e) {
     suppressClickRef.current = true
-    setIsOpen(prev => !prev)
+    userToggleOpen()
     e.preventDefault()
     e.stopPropagation()
   }
+
   function onDotClick(e) {
     if (suppressClickRef.current) {
       suppressClickRef.current = false
       return
     }
-    // setIsOpen(prev => !prev)
+    // click does not toggle on desktop to avoid double-trigger with touch
   }
+
   function onDotKeyDown(e) {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault()
-      setIsOpen(prev => !prev)
+      userToggleOpen()
     }
   }
 
@@ -78,7 +100,10 @@ export const GlowDotMobile= forwardRef(function GlowDotMobile(props, _ref) {
   }, [isOpen, fadeMs])
 
   // helper
-  function toCssUnit(v) { return typeof v === "number" ? `${v}px` : v }
+  function toCssUnit(v) {
+    return typeof v === "number" ? `${v}px` : v
+  }
+
   const dotPosStyle = {
     top: toCssUnit(top),
     left: toCssUnit(left),
@@ -98,26 +123,39 @@ export const GlowDotMobile= forwardRef(function GlowDotMobile(props, _ref) {
     }
     return { left: absX, top: absY }
   }
+
   useEffect(() => {
-    if (!(absolutePx && Number.isFinite(absX) && Number.isFinite(absY))) { setAbsLocal(null); return }
+    if (!(absolutePx && Number.isFinite(absX) && Number.isFinite(absY))) {
+      setAbsLocal(null)
+      return
+    }
     const recalc = () => setAbsLocal(computeAbsLocal())
     recalc()
     window.addEventListener("resize", recalc)
     window.addEventListener("scroll", recalc, { passive: true })
-    return () => { window.removeEventListener("resize", recalc); window.removeEventListener("scroll", recalc) }
+    return () => {
+      window.removeEventListener("resize", recalc)
+      window.removeEventListener("scroll", recalc)
+    }
   }, [absolutePx, absX, absY])
-  const dotStyle = (absolutePx && absLocal)
-    ? { ...dotPosStyle, top: `${absLocal.top}px`, left: `${absLocal.left}px` }
-    : dotPosStyle
+
+  const dotStyle =
+    absolutePx && absLocal
+      ? { ...dotPosStyle, top: `${absLocal.top}px`, left: `${absLocal.left}px` }
+      : dotPosStyle
 
   // --- viewport size for connector ---
   const [viewport, setViewport] = useState({ w: 0, h: 0 })
   useEffect(() => {
-    const set = () => setViewport({ w: window.innerWidth, h: window.innerHeight })
+    const set = () =>
+      setViewport({ w: window.innerWidth, h: window.innerHeight })
     set()
     window.addEventListener("resize", set)
     window.addEventListener("orientationchange", set)
-    return () => { window.removeEventListener("resize", set); window.removeEventListener("orientationchange", set) }
+    return () => {
+      window.removeEventListener("resize", set)
+      window.removeEventListener("orientationchange", set)
+    }
   }, [])
 
   // re-render while open when scrolling so connector follows the dot
@@ -141,14 +179,26 @@ export const GlowDotMobile= forwardRef(function GlowDotMobile(props, _ref) {
 
   // latest open for controller
   const isOpenRef = useRef(isOpen)
-  useEffect(() => { isOpenRef.current = isOpen }, [isOpen])
+  useEffect(() => {
+    isOpenRef.current = isOpen
+  }, [isOpen])
+
+  // track autoOpenDisabled in a ref for use inside timeouts
+  const autoOpenDisabledRef = useRef(autoOpenDisabled)
+  useEffect(() => {
+    autoOpenDisabledRef.current = autoOpenDisabled
+  }, [autoOpenDisabled])
 
   // imperative API
-  useImperativeHandle(_ref, () => ({
-    open: () => setIsOpen(true),
-    close: () => setIsOpen(false),
-    isOpen: () => isOpenRef.current,
-  }), [])
+  useImperativeHandle(
+    _ref,
+    () => ({
+      open: () => setIsOpen(true),
+      close: () => setIsOpen(false),
+      isOpen: () => isOpenRef.current,
+    }),
+    []
+  )
 
   // controller registration
   useEffect(() => {
@@ -162,18 +212,57 @@ export const GlowDotMobile= forwardRef(function GlowDotMobile(props, _ref) {
     return unregister
   }, [dotId, register])
 
-  // visibility report
+  // visibility report + delayed auto-open-when-visible
   useEffect(() => {
     if (!dotRef.current || !dotId) return
+
+    const AUTO_OPEN_DELAY_MS = 500
+
     const obs = new IntersectionObserver(
       entries => {
         const entry = entries[0]
-        setVisible(dotId, entry.isIntersecting && entry.intersectionRatio >= threshold)
+        const visible =
+          entry.isIntersecting && entry.intersectionRatio >= threshold
+
+        // keep provider informed
+        setVisible(dotId, visible)
+
+        if (visible) {
+          // Clear any existing timer before scheduling a new one
+          if (autoOpenTimeoutRef.current) {
+            clearTimeout(autoOpenTimeoutRef.current)
+            autoOpenTimeoutRef.current = null
+          }
+
+          // Delay auto-open slightly so the DOT is seen first
+          if (!autoOpenDisabledRef.current && !isOpenRef.current) {
+            autoOpenTimeoutRef.current = setTimeout(() => {
+              if (!autoOpenDisabledRef.current && !isOpenRef.current) {
+                setIsOpen(true)
+              }
+            }, AUTO_OPEN_DELAY_MS)
+          }
+        } else {
+          // Leaving viewport: cancel pending auto-open, close, and reset flag
+          if (autoOpenTimeoutRef.current) {
+            clearTimeout(autoOpenTimeoutRef.current)
+            autoOpenTimeoutRef.current = null
+          }
+          setIsOpen(false)
+          setAutoOpenDisabled(false)
+        }
       },
       { threshold }
     )
+
     obs.observe(dotRef.current)
-    return () => obs.disconnect()
+    return () => {
+      obs.disconnect()
+      if (autoOpenTimeoutRef.current) {
+        clearTimeout(autoOpenTimeoutRef.current)
+        autoOpenTimeoutRef.current = null
+      }
+    }
   }, [dotId, setVisible, threshold])
 
   // connector endpoints (viewport space)
@@ -188,20 +277,29 @@ export const GlowDotMobile= forwardRef(function GlowDotMobile(props, _ref) {
   const glowStyle = { backgroundColor: color }
 
   // portal content (ensures true viewport-centering regardless of transformed ancestors)
-  const connectorPortal = (isPresent && viewport.w > 0 && viewport.h > 0)
-    ? createPortal(
-        <svg
-          className={`fixed inset-0 pointer-events-none z-10 ${fadeClass}`}
-          style={fadeStyle}
-          width={viewport.w}
-          height={viewport.h}
-          viewBox={`0 0 ${viewport.w} ${viewport.h}`}
-        >
-          <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#374151" strokeWidth="1.25" strokeLinecap="round" />
-        </svg>,
-        document.body
-      )
-    : null
+  const connectorPortal =
+    isPresent && viewport.w > 0 && viewport.h > 0
+      ? createPortal(
+          <svg
+            className={`fixed inset-0 pointer-events-none z-10 ${fadeClass}`}
+            style={fadeStyle}
+            width={viewport.w}
+            height={viewport.h}
+            viewBox={`0 0 ${viewport.w} ${viewport.h}`}
+          >
+            <line
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke="#374151"
+              strokeWidth="1.25"
+              strokeLinecap="round"
+            />
+          </svg>,
+          document.body
+        )
+      : null
 
   const textboxPortal = isPresent
     ? createPortal(
@@ -216,7 +314,15 @@ export const GlowDotMobile= forwardRef(function GlowDotMobile(props, _ref) {
               aria-label="Close textbox"
               className="absolute top-2 right-2 inline-flex h-7 w-7 items-center justify-center rounded-md"
               style={{ color: "#a9b3b8" }}
-              onClick={e => { e.stopPropagation(); setIsOpen(false) }}
+              onClick={e => {
+                e.stopPropagation()
+                setAutoOpenDisabled(true)
+                if (autoOpenTimeoutRef.current) {
+                  clearTimeout(autoOpenTimeoutRef.current)
+                  autoOpenTimeoutRef.current = null
+                }
+                setIsOpen(false)
+              }}
               onMouseDown={e => e.stopPropagation()}
               onTouchStart={e => e.stopPropagation()}
             >
@@ -268,13 +374,15 @@ export const GlowDotMobile= forwardRef(function GlowDotMobile(props, _ref) {
       />
 
       {/* number badge below the glow dot */}
-      {(boxNumber !== undefined && boxNumber !== null && String(boxNumber).length > 0) && (
-        <div className="absolute left-1/2 top-full -translate-x-1/2 mt-1 z-40">
-          <span className="inline-flex h-6 min-w-6 px-2 items-center justify-center rounded-full bg-[#0c1a22]/85 text-white/90 text-xs font-medium pointer-events-none">
-            {String(boxNumber)}
-          </span>
-        </div>
-      )}
+      {boxNumber !== undefined &&
+        boxNumber !== null &&
+        String(boxNumber).length > 0 && (
+          <div className="absolute left-1/2 top-full -translate-x-1/2 mt-1 z-40">
+            <span className="inline-flex h-6 min-w-6 px-2 items-center justify-center rounded-full bg-[#0c1a22]/85 text-white/90 text-xs font-medium pointer-events-none">
+              {String(boxNumber)}
+            </span>
+          </div>
+        )}
 
       {textboxPortal}
     </div>

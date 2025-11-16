@@ -52,8 +52,7 @@ export default function News() {
       cancelled = true;
       img.onload = null;
     };
-    // NOTE: intentionally NOT depending on `srcs` to avoid redundant triggers.
-  }, [targetSrc, active, srcs]); // `srcs` here is fine; the early-return prevents loops.
+  }, [targetSrc, active, srcs]);
 
   // Scroll logic for navbar
   useEffect(() => {
@@ -64,15 +63,15 @@ export default function News() {
 
   return (
     <div className="relative min-h-screen w-full">
-      {/* Fixed, full-viewport crossfade stack with dark base (prevents white flash) */}
-      <div className="fixed inset-0 -z-10 bg-[#0c1a22] isolate">
+      {/* Background stack – fixed to viewport */}
+      <div className="fixed inset-0 z-1 bg-[#0c1a22] overflow-hidden">
         {/* Layer A */}
         <img
           aria-hidden
           alt=""
           decoding="async"
           src={srcs[0]}
-          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ease-in-out will-change-[opacity] ${
+          className={`h-full w-full object-cover absolute inset-0 transition-opacity duration-700 ease-in-out will-change-[opacity] ${
             active === 0 ? "opacity-100" : "opacity-0"
           }`}
           style={{ objectPosition: "center" }}
@@ -83,13 +82,14 @@ export default function News() {
           alt=""
           decoding="async"
           src={srcs[1]}
-          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ease-in-out will-change-[opacity] ${
+          className={`h-full w-full object-cover absolute inset-0 transition-opacity duration-700 ease-in-out will-change-[opacity] ${
             active === 1 ? "opacity-100" : "opacity-0"
           }`}
           style={{ objectPosition: "center" }}
         />
       </div>
 
+      {/* Foreground content */}
       <header
         className="relative z-30 transition-opacity duration-500"
         style={{ opacity: showNavbar ? 1 : 0 }}

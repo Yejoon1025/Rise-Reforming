@@ -11,7 +11,7 @@ import { GlowDotMobile } from "../components/GlowDotMobile";
 import { GlowDotMobileProvider } from "../components/GlowDotMobileProvider";
 import * as text from "../data/PageContent";
 import MobileNavbar from "../components/MobileNavbar";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 export default function Test() {
   const maxPg = 15; // minus one
@@ -291,6 +291,37 @@ export default function Test() {
         </AnimatePresence>
       </div>
 
+      <div
+        className={`absolute bottom-2 right-5 z-[60] group transition-opacity duration-700 flex items-center`}
+      >
+
+        {/* Chevron icon button */}
+        <button
+          onClick={() => goDown()}
+          aria-label="Down"
+          className="p-2 hover:opacity-80 transition-opacity"
+        >
+          <ChevronDown className="text-[#f8da9c]" size={32} />
+
+        </button>
+      </div>
+
+      <div
+        className={`absolute bottom-10 right-5 z-[60] group transition-opacity duration-700 flex items-center ${pg === 0 ? "opacity-0 pointer-events-none" : "opacity-100"
+          }`}
+      >
+
+        {/* Chevron icon button */}
+        <button
+          onClick={() => goUp()}
+          aria-label="Up"
+          className="p-2 hover:opacity-80 transition-opacity"
+        >
+          <ChevronUp className="text-[#f8da9c]" size={32} />
+
+        </button>
+      </div>
+
       <div className="relative z-10 h-full w-full">
 
         {(pg > 1 && pg < 5) && (
@@ -317,26 +348,22 @@ export default function Test() {
 
         {pg === 0 && (
           <div
-            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
+            className={`h-full w-full flex items-center justify-center transition-opacity duration-50 ${
               moving === 0 ? "opacity-100" : "opacity-0"
             }`}
           >
             <h1 className="font-bahnschrift text-4xl md:text-6xl text-[#e0e0e0] px-6 text-center leading-tight max-w-[70vw] mx-auto">
               It's time for a paradigm shift in chemical manufacturing
             </h1>
-            <button
-                onClick={() => navigate("/team")}
-                aria-label="Continue"
-                className="p-2 hover:opacity-80 transition-opacity absolute top-[80%]"
-              >
-                <ChevronDown className="text-[#f8da9c] animate-bounce" size={32} />
-              </button>
+            <div className="absolute bottom-5 right-20 z-20 text-white text-sm font-bahnschrift animate-bounce">
+              Use arrows to navigate:
+            </div>
           </div>
         )}
 
         {pg === 1 && (
           <div
-            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
+            className={`h-full w-full flex items-center justify-center transition-opacity duration-50 ${
               moving === 0 ? "opacity-100" : "opacity-0"
             }`}
           >
@@ -348,7 +375,7 @@ export default function Test() {
 
         {pg === 2 && (
           <div
-            className={`transition-opacity duration-150 ${
+            className={`transition-opacity duration-50 ${
               moving === 0 ? "opacity-100" : "opacity-0"
             }`}
           >
@@ -364,15 +391,12 @@ export default function Test() {
                 boundsRef={imgRef}
               />
             </GlowDotMobileProvider>
-            <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 z-20 text-white text-sm font-bahnschrift animate-bounce">
-              Swipe down or tap!
-            </div>
           </div>
         )}
 
         {pg === 3 && (
           <div
-            className={`transition-opacity duration-150 ${
+            className={`transition-opacity duration-50 ${
               moving === 0 ? "opacity-100" : "opacity-0"
             }`}
           >
@@ -393,7 +417,7 @@ export default function Test() {
 
         {pg === 4 && (
           <div
-            className={`transition-opacity duration-150 ${
+            className={`transition-opacity duration-50 ${
               moving === 0 ? "opacity-100" : "opacity-0"
             }`}
           >
@@ -414,7 +438,7 @@ export default function Test() {
 
         {pg === 5 && (
           <div
-            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
+            className={`h-full w-full flex items-center justify-center transition-opacity duration-50 ${
               moving === 0 ? "opacity-100" : "opacity-0"
             }`}
           >
@@ -426,7 +450,7 @@ export default function Test() {
 
         {pg === 6 && (
           <div
-            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
+            className={`h-full w-full flex items-center justify-center transition-opacity duration-50 ${
               moving === 0 ? "opacity-100" : "opacity-0"
             }`}
           >
@@ -448,7 +472,7 @@ export default function Test() {
 
         {pg === 7 && (
           <div
-            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
+            className={`h-full w-full flex items-center justify-center transition-opacity duration-50 ${
               moving === 0 ? "opacity-100" : "opacity-0"
             }`}
           >
@@ -469,7 +493,7 @@ export default function Test() {
 
         {pg === 8 && (
           <div
-            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
+            className={`h-full w-full flex items-center justify-center transition-opacity duration-50 ${
               moving === 0 ? "opacity-100" : "opacity-0"
             }`}
           >
@@ -481,7 +505,7 @@ export default function Test() {
 
         {pg === 9 && (
           <div
-            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
+            className={`h-full w-full flex items-center justify-center transition-opacity duration-50 ${
               moving === 0 ? "opacity-100" : "opacity-0"
             }`}
           >
@@ -503,7 +527,7 @@ export default function Test() {
 
         {pg === 10 && (
           <div
-            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
+            className={`h-full w-full flex items-center justify-center transition-opacity duration-50 ${
               moving === 0 ? "opacity-100" : "opacity-0"
             }`}
           >
@@ -525,7 +549,7 @@ export default function Test() {
 
         {pg === 11 && (
           <div
-            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
+            className={`h-full w-full flex items-center justify-center transition-opacity duration-50 ${
               moving === 0 ? "opacity-100" : "opacity-0"
             }`}
           >
@@ -547,7 +571,7 @@ export default function Test() {
 
         {pg === 12 && (
           <div
-            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
+            className={`h-full w-full flex items-center justify-center transition-opacity duration-50 ${
               moving === 0 ? "opacity-100" : "opacity-0"
             }`}
           >
@@ -559,7 +583,7 @@ export default function Test() {
 
         {pg === 13 && (
           <div
-            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
+            className={`h-full w-full flex items-center justify-center transition-opacity duration-50 ${
               moving === 0 ? "opacity-100" : "opacity-0"
             }`}
           >
@@ -580,7 +604,7 @@ export default function Test() {
 
         {pg === 14 && (
           <div
-            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
+            className={`h-full w-full flex items-center justify-center transition-opacity duration-50 ${
               moving === 0 ? "opacity-100" : "opacity-0"
             }`}
           >
@@ -601,21 +625,13 @@ export default function Test() {
 
         {pg === 15 && (
           <div
-            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
+            className={`h-full w-full flex items-center justify-center transition-opacity duration-50 ${
               moving === 0 ? "opacity-100" : "opacity-0"
             }`}
           >
               <h2 className="absolute top-[40%] font-bahnschrift text-4xl md:text-6xl text-[#e0e0e0] px-6 text-center leading-tight max-w-[90vw] mx-auto">
-              Swipe down to learn about our technology
+              Go down to learn about our technology
              </h2>
-              {/* Chevron icon button */}
-              <button
-                onClick={() => navigate("/team")}
-                aria-label="Continue"
-                className="p-2 hover:opacity-80 transition-opacity absolute top-[80%]"
-              >
-                <ChevronDown className="text-[#f8da9c] animate-bounce" size={32} />
-              </button>
           </div>
         )}
       </div>
