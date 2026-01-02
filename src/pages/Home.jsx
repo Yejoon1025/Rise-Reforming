@@ -43,7 +43,7 @@ const DOT_TRANSITIONS = {
 }
 // --------------------------------------------------------------------
 
-const DURATION_MS = 800 // unified guard duration; align with runner timings
+const DURATION_MS = 1500 // unified guard duration; align with runner timings
 
 function cleanup(node) {
   if (!node) return

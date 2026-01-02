@@ -1,6 +1,6 @@
 // src/components/TimeLine.jsx
 import { useEffect, useRef, useState } from "react"
-import { ChevronUp } from "lucide-react"
+import { ChevronUp, ChevronDown, ChevronsUp } from "lucide-react"
 
 const NEWS_FADE = "transition-opacity duration-700 ease-out"
 
@@ -37,6 +37,8 @@ export function TimeLine({
   const [showToTop, setShowToTop] = useState(false)
   const [isAtPageTop, setIsAtPageTop] = useState(true)
   const [isReturningToTop, setIsReturningToTop] = useState(false)
+
+  const [isAtPageBottom, setIsAtPageBottom] = useState(false)
 
   const wheelAccumRef = useRef(0)
   const touchStartYRef = useRef(0)
@@ -111,6 +113,12 @@ export function TimeLine({
       setIsAtPageTop(nowAtTop)
       if (nowAtTop && isReturningToTop) setIsReturningToTop(false)
 
+      const doc = document.documentElement
+      const scrollBottom =
+        window.innerHeight + window.scrollY >= (doc.scrollHeight - 2)
+
+      setIsAtPageBottom(scrollBottom)
+
       if (scrollIdleTimerRef.current) clearTimeout(scrollIdleTimerRef.current)
       scrollIdleTimerRef.current = setTimeout(() => {
         isAutoScrollingRef.current = false
@@ -172,6 +180,16 @@ export function TimeLine({
   const emaRef = useRef(0)
   const lastTsRef = useRef(0)
 
+  useEffect(() => {
+    const onWheel = (e) => {
+      e.preventDefault()
+    }
+
+    window.addEventListener("wheel", onWheel, { passive: false })
+    return () => window.removeEventListener("wheel", onWheel)
+  }, [])
+
+  
   useEffect(() => {
     const onWheel = (e) => {
       const timelineRect = sectionRef.current?.getBoundingClientRect()
@@ -348,6 +366,25 @@ export function TimeLine({
       setActiveStable(idx)
       if (primePush && window.scrollY > TOP_EPS) setIsReturningToTop(false)
     }, 500)
+  }
+
+  function triggerArrow(key) {
+  // key: "ArrowUp" or "ArrowDown"
+  const event = new KeyboardEvent("keydown", {
+    key,
+    code: key,
+    bubbles: true,
+  });
+
+  window.dispatchEvent(event);
+}
+
+  function goUp () {
+    triggerArrow("ArrowUp");
+  }
+
+  function goDown () {
+    triggerArrow("ArrowDown");
   }
 
   function setActiveStable(idx) {
@@ -562,14 +599,38 @@ export function TimeLine({
       {/* Back to top — Chevron only, no circle */}
       <button
         type="button"
-        onClick={() => backToTop(true)}
-        aria-label="Back to top"
-        className={`fixed bottom-6 right-6 z-50 text-white/80 transition-opacity duration-200
-                    ${showToTop ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"} 
+        onClick={() => goDown()}
+        aria-label="Down"
+        className={`fixed bottom-8 right-5 z-50 text-white/80 transition-opacity duration-200
+                    ${!isAtPageBottom ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"} 
                     hover:text-white focus:outline-none focus:ring-0`}
         style={{ background: "transparent", border: "none" }}
       >
-        <ChevronUp className="h-6 w-6 animate-bounce" aria-hidden />
+        <ChevronDown className="" aria-hidden size={32}/>
+      </button>
+
+      <button
+        type="button"
+        onClick={() => goUp()}
+        aria-label="Up"
+        className={`fixed bottom-16 right-5 z-50 text-white/80 transition-opacity duration-200
+                    ${!isAtPageTop ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"} 
+                    hover:text-white focus:outline-none focus:ring-0`}
+        style={{ background: "transparent", border: "none" }}
+      >
+        <ChevronUp className="" aria-hidden size={32}/>
+      </button>
+
+      <button
+        type="button"
+        onClick={() => backToTop(true)}
+        aria-label="Back to top"
+        className={`fixed bottom-24 right-5 z-50 text-white/80 transition-opacity duration-200
+                    ${!isAtPageTop ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"} 
+                    hover:text-white focus:outline-none focus:ring-0`}
+        style={{ background: "transparent", border: "none" }}
+      >
+        <ChevronsUp className="" aria-hidden size={32}/>
       </button>
     </section>
   )

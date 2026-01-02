@@ -33,7 +33,7 @@ const DOT_TRANSITIONS = {
 }
 // --------------------------------------------------------------------
 
-const DURATION_MS = 800 // unified guard duration; align with runner timings
+const DURATION_MS = 1500 // unified guard duration; align with runner timings
 
 // Single-flight lock to prevent input spam
 function useAnimLock() {
@@ -519,7 +519,7 @@ export default function Tecyh() {
 
         {/* Chevron icon button */}
         <button
-          onClick={() => navigate("/tech")}
+          onClick={() => navigate("/team")}
           aria-label="Continue"
           className="p-2 hover:opacity-80 transition-opacity"
         >
@@ -527,6 +527,13 @@ export default function Tecyh() {
 
         </button>
       </div>
+      {at != 2 && (
+        <div
+          className="absolute bottom-11 right-18 z-[70] text-white/70 text-sm md:text-base animate-pulse select-none pointer-events-auto"
+        >
+          Click or use arrow keys to navigate:
+        </div>
+      )}
     </div>
   )
 }

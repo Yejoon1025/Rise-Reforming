@@ -6,13 +6,32 @@ import bg1 from "../assets/TechOne.png";
 import bg2 from "../assets/TechTwo.png";
 import { GlowDotMobile } from "../components/GlowDotMobile";
 import { GlowDotMobileProvider } from "../components/GlowDotMobileProvider";
-import * as text from "../data/PageContent";
 import MobileNavbar from "../components/MobileNavbar";
 import { ChevronDown, ChevronUp } from "lucide-react";
+
+const CONTENT_URL =
+  "https://raw.githubusercontent.com/Yejoon1025/rise-content/main/Content.json";
 
 export default function Test() {
   const maxPg = 11; // minus one
   const [pg, setPg] = useState(0);
+
+  // Remote content state
+  const [content, setContent] = useState(null);
+
+  useEffect(() => {
+    const fetchContent = async () => {
+      try {
+        const res = await fetch(CONTENT_URL);
+        if (!res.ok) throw new Error("Failed to load content.json");
+        const data = await res.json();
+        setContent(data);
+      } catch (err) {
+        console.error("Error loading remote content:", err);
+      }
+    };
+    fetchContent();
+  }, []);
 
   const pos = [0, 0.001, -0.2, 0.15, 0.16, -0.3, 0.15, 0, 0.09, -0.2, 0.3, 0]; // Reverse from middle
   const dotX = [0.7, 0.35, 0.35, 0.8, 0.35, 0.41, 0.7, 0.2];
@@ -53,7 +72,10 @@ export default function Test() {
     // Ensure the app fully pins to the viewport height
     const setVh = () => {
       // modern browsers support dvh; keep a fallback anyway
-      document.documentElement.style.setProperty("--app-dvh", `${window.innerHeight}px`);
+      document.documentElement.style.setProperty(
+        "--app-dvh",
+        `${window.innerHeight}px`
+      );
     };
     setVh();
     window.addEventListener("resize", setVh);
@@ -79,11 +101,13 @@ export default function Test() {
   }, []);
 
   const goDown = useCallback(() => {
-    if (pg === maxPg) {navigate("/team")};
+    if (pg === maxPg) {
+      navigate("/team");
+    }
     setMoving(1);
     setOffset(calcOffset(pos[pg + 1]));
     setPg(pg + 1);
-  }, [pg]);
+  }, [pg, navigate]);
 
   const goUp = useCallback(() => {
     if (pg === 0) return;
@@ -93,7 +117,8 @@ export default function Test() {
   }, [pg]);
 
   const currentXP = () => {
-    const xPercentage = ((0.5 * width) - offset - window.innerWidth / 2) / width;
+    const xPercentage =
+      (0.5 * width - offset - window.innerWidth / 2) / width;
     return xPercentage;
   };
 
@@ -141,21 +166,26 @@ export default function Test() {
   const gestureTriggeredRef = useRef(false);
   const touchStart = useRef({ x: null, y: null });
 
-  const tryTriggerSwipe = useCallback((dy, dx) => {
-    const now = performance.now();
-    if (now - (lastScrollTsRef.current || 0) < THROTTLE_MS) return false;
+  const tryTriggerSwipe = useCallback(
+    (dy, dx) => {
+      const now = performance.now();
+      if (now - (lastScrollTsRef.current || 0) < THROTTLE_MS) return false;
 
-    const absDy = Math.abs(dy);
-    const absDx = Math.abs(dx);
-    const isVertical = absDy >= SWIPE_THRESHOLD_PX && absDy > absDx * VERTICAL_DOMINANCE_RATIO;
+      const absDy = Math.abs(dy);
+      const absDx = Math.abs(dx);
+      const isVertical =
+        absDy >= SWIPE_THRESHOLD_PX &&
+        absDy > absDx * VERTICAL_DOMINANCE_RATIO;
 
-    if (!isVertical) return false;
+      if (!isVertical) return false;
 
-    lastScrollTsRef.current = now;
-    if (dy > 0) goUp();
-    else goDown();
-    return true;
-  }, [goDown, goUp]);
+      lastScrollTsRef.current = now;
+      if (dy > 0) goUp();
+      else goDown();
+      return true;
+    },
+    [goDown, goUp]
+  );
 
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -192,7 +222,7 @@ export default function Test() {
       const dx = (e.touches?.[0]?.clientX ?? ts.x) - ts.x;
       const dy = (e.touches?.[0]?.clientY ?? ts.y) - ts.y;
 
-      // If we�셱e likely to consume this gesture, prevent native scrolling
+      // If we’re likely to consume this gesture, prevent native scrolling
       if (Math.abs(dy) > Math.abs(dx)) {
         e.preventDefault();
       }
@@ -260,7 +290,7 @@ export default function Test() {
       className="fixed inset-0 overflow-hidden bg-black"
       style={{
         height: "var(--app-dvh, 100dvh)", // uses innerHeight; falls back to 100dvh
-        touchAction: "none",              // tells UA we�셪l handle gestures
+        touchAction: "none", // tells UA we’ll handle gestures
       }}
     >
       <MobileNavbar />
@@ -285,7 +315,6 @@ export default function Test() {
       <div
         className={`absolute bottom-2 right-5 z-[60] group transition-opacity duration-700 flex items-center`}
       >
-
         {/* Chevron icon button */}
         <button
           onClick={() => goDown()}
@@ -293,15 +322,14 @@ export default function Test() {
           className="p-2 hover:opacity-80 transition-opacity"
         >
           <ChevronDown className="text-[#f8da9c]" size={32} />
-
         </button>
       </div>
 
       <div
-        className={`absolute bottom-10 right-5 z-[60] group transition-opacity duration-700 flex items-center ${pg === 0 ? "opacity-0 pointer-events-none" : "opacity-100"
-          }`}
+        className={`absolute bottom-10 right-5 z-[60] group transition-opacity duration-700 flex items-center ${
+          pg === 0 ? "opacity-0 pointer-events-none" : "opacity-100"
+        }`}
       >
-
         {/* Chevron icon button */}
         <button
           onClick={() => goUp()}
@@ -309,27 +337,26 @@ export default function Test() {
           className="p-2 hover:opacity-80 transition-opacity"
         >
           <ChevronUp className="text-[#f8da9c]" size={32} />
-
         </button>
       </div>
 
       <div className="relative z-10 h-full w-full">
-
-        {(pg > 1 && pg < 7) && (
+        {pg > 1 && pg < 7 && (
           <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-20 text-[#f8da9c] text-xl font-bahnschrift">
-              Chemical Process
-            </div>
+            Chemical Process
+          </div>
         )}
-        {(pg > 7 && pg < 11) && (
+        {pg > 7 && pg < 11 && (
           <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-20 text-[#f8da9c] text-l font-bahnschrift">
-              Competitive Advantages
-            </div>
+            Competitive Advantages
+          </div>
         )}
 
         {pg === 0 && (
           <div
-            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${moving === 0 ? "opacity-100" : "opacity-0"
-              }`}
+            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
+              moving === 0 ? "opacity-100" : "opacity-0"
+            }`}
           >
             <h1 className="font-bahnschrift text-4xl md:text-6xl text-[#e0e0e0] px-6 text-center leading-tight max-w-[70vw] mx-auto">
               Our Technology
@@ -339,8 +366,9 @@ export default function Test() {
 
         {pg === 1 && (
           <div
-            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${moving === 0 ? "opacity-100" : "opacity-0"
-              }`}
+            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
+              moving === 0 ? "opacity-100" : "opacity-0"
+            }`}
           >
             <h2 className="absolute top-[50%] font-bahnschrift text-4xl md:text-6xl text-[#f8da9c] px-6 text-center">
               In Simple Terms, We:
@@ -350,10 +378,15 @@ export default function Test() {
 
         {pg === 2 && (
           <div
-            className={`transition-opacity duration-150 ${moving === 0 ? "opacity-100" : "opacity-0"
-              }`}
+            className={`transition-opacity duration-150 ${
+              moving === 0 ? "opacity-100" : "opacity-0"
+            }`}
           >
-            <GlowDotMobileProvider baseRef={imgRef} openStrategy="next" threshold={0.3}>
+            <GlowDotMobileProvider
+              baseRef={imgRef}
+              openStrategy="next"
+              threshold={0.3}
+            >
               <GlowDotMobile
                 absolutePx={true}
                 absX={(dotX[0] - topLeft) * width}
@@ -361,8 +394,8 @@ export default function Test() {
                 defaultOffsetX={-145}
                 defaultOffsetY={-40}
                 dotId="1"
-                title={text.Tech1Title}
-                text={text.Tech1}
+                title={content?.Tech1Title || ""}
+                text={content?.Tech1 || ""}
                 boundsRef={imgRef}
               />
             </GlowDotMobileProvider>
@@ -371,10 +404,15 @@ export default function Test() {
 
         {pg === 3 && (
           <div
-            className={`transition-opacity duration-150 ${moving === 0 ? "opacity-100" : "opacity-0"
-              }`}
+            className={`transition-opacity duration-150 ${
+              moving === 0 ? "opacity-100" : "opacity-0"
+            }`}
           >
-            <GlowDotMobileProvider baseRef={imgRef} openStrategy="next" threshold={0.3}>
+            <GlowDotMobileProvider
+              baseRef={imgRef}
+              openStrategy="next"
+              threshold={0.3}
+            >
               <GlowDotMobile
                 absolutePx={true}
                 absX={(dotX[1] - topLeft) * width}
@@ -382,8 +420,8 @@ export default function Test() {
                 defaultOffsetX={-145}
                 defaultOffsetY={-40}
                 dotId="1"
-                title={text.Tech2Title}
-                text={text.Tech2}
+                title={content?.Tech2Title || ""}
+                text={content?.Tech2 || ""}
                 boundsRef={imgRef}
               />
             </GlowDotMobileProvider>
@@ -392,10 +430,15 @@ export default function Test() {
 
         {pg === 4 && (
           <div
-            className={`transition-opacity duration-150 ${moving === 0 ? "opacity-100" : "opacity-0"
-              }`}
+            className={`transition-opacity duration-150 ${
+              moving === 0 ? "opacity-100" : "opacity-0"
+            }`}
           >
-            <GlowDotMobileProvider baseRef={imgRef} openStrategy="next" threshold={0.3}>
+            <GlowDotMobileProvider
+              baseRef={imgRef}
+              openStrategy="next"
+              threshold={0.3}
+            >
               <GlowDotMobile
                 absolutePx={true}
                 absX={(dotX[2] - topLeft) * width}
@@ -403,7 +446,7 @@ export default function Test() {
                 defaultOffsetX={-145}
                 defaultOffsetY={-40}
                 dotId="2"
-                text={text.Tech3}
+                text={content?.Tech3 || ""}
                 boundsRef={imgRef}
               />
             </GlowDotMobileProvider>
@@ -412,10 +455,15 @@ export default function Test() {
 
         {pg === 5 && (
           <div
-            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${moving === 0 ? "opacity-100" : "opacity-0"
-              }`}
+            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
+              moving === 0 ? "opacity-100" : "opacity-0"
+            }`}
           >
-            <GlowDotMobileProvider baseRef={imgRef} openStrategy="next" threshold={0.3}>
+            <GlowDotMobileProvider
+              baseRef={imgRef}
+              openStrategy="next"
+              threshold={0.3}
+            >
               <GlowDotMobile
                 absolutePx={true}
                 absX={(dotX[3] - topLeft) * width}
@@ -423,8 +471,8 @@ export default function Test() {
                 defaultOffsetX={-145}
                 defaultOffsetY={-40}
                 dotId="2"
-                title={text.Tech5Title}
-                text={text.Tech5}
+                title={content?.Tech5Title || ""}
+                text={content?.Tech5 || ""}
                 boundsRef={imgRef}
               />
             </GlowDotMobileProvider>
@@ -433,10 +481,15 @@ export default function Test() {
 
         {pg === 6 && (
           <div
-            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${moving === 0 ? "opacity-100" : "opacity-0"
-              }`}
+            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
+              moving === 0 ? "opacity-100" : "opacity-0"
+            }`}
           >
-            <GlowDotMobileProvider baseRef={imgRef} openStrategy="next" threshold={0.3}>
+            <GlowDotMobileProvider
+              baseRef={imgRef}
+              openStrategy="next"
+              threshold={0.3}
+            >
               <GlowDotMobile
                 absolutePx={true}
                 absX={(dotX[4] - topLeft) * width}
@@ -444,7 +497,7 @@ export default function Test() {
                 defaultOffsetX={-145}
                 defaultOffsetY={-40}
                 dotId="1"
-                text={text.Tech4}
+                text={content?.Tech4 || ""}
                 boundsRef={imgRef}
               />
             </GlowDotMobileProvider>
@@ -453,8 +506,9 @@ export default function Test() {
 
         {pg === 7 && (
           <div
-            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${moving === 0 ? "opacity-100" : "opacity-0"
-              }`}
+            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
+              moving === 0 ? "opacity-100" : "opacity-0"
+            }`}
           >
             <h2 className="absolute top-[50%] font-bahnschrift text-4xl md:text-6xl text-[#f8da9c] px-6 text-center">
               Our Process Is:
@@ -464,10 +518,15 @@ export default function Test() {
 
         {pg === 8 && (
           <div
-            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${moving === 0 ? "opacity-100" : "opacity-0"
-              }`}
+            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
+              moving === 0 ? "opacity-100" : "opacity-0"
+            }`}
           >
-            <GlowDotMobileProvider baseRef={imgRef} openStrategy="next" threshold={0.3}>
+            <GlowDotMobileProvider
+              baseRef={imgRef}
+              openStrategy="next"
+              threshold={0.3}
+            >
               <GlowDotMobile
                 absolutePx={true}
                 absX={(dotX[5] - topLeft) * width}
@@ -475,8 +534,8 @@ export default function Test() {
                 defaultOffsetX={-145}
                 defaultOffsetY={-40}
                 dotId="1"
-                title={text.Tech6Title}
-                text={text.Tech6}
+                title={content?.Tech6Title || ""}
+                text={content?.Tech6 || ""}
                 boundsRef={imgRef}
               />
             </GlowDotMobileProvider>
@@ -485,10 +544,15 @@ export default function Test() {
 
         {pg === 9 && (
           <div
-            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${moving === 0 ? "opacity-100" : "opacity-0"
-              }`}
+            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
+              moving === 0 ? "opacity-100" : "opacity-0"
+            }`}
           >
-            <GlowDotMobileProvider baseRef={imgRef} openStrategy="next" threshold={0.3}>
+            <GlowDotMobileProvider
+              baseRef={imgRef}
+              openStrategy="next"
+              threshold={0.3}
+            >
               <GlowDotMobile
                 absolutePx={true}
                 absX={(dotX[6] - topLeft) * width}
@@ -496,8 +560,8 @@ export default function Test() {
                 defaultOffsetX={-145}
                 defaultOffsetY={-40}
                 dotId="1"
-                title={text.Tech7Title}
-                text={text.Tech7}
+                title={content?.Tech7Title || ""}
+                text={content?.Tech7 || ""}
                 boundsRef={imgRef}
               />
             </GlowDotMobileProvider>
@@ -506,10 +570,15 @@ export default function Test() {
 
         {pg === 10 && (
           <div
-            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${moving === 0 ? "opacity-100" : "opacity-0"
-              }`}
+            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
+              moving === 0 ? "opacity-100" : "opacity-0"
+            }`}
           >
-            <GlowDotMobileProvider baseRef={imgRef} openStrategy="next" threshold={0.3}>
+            <GlowDotMobileProvider
+              baseRef={imgRef}
+              openStrategy="next"
+              threshold={0.3}
+            >
               <GlowDotMobile
                 absolutePx={true}
                 absX={(dotX[7] - topLeft) * width}
@@ -517,8 +586,8 @@ export default function Test() {
                 defaultOffsetX={-145}
                 defaultOffsetY={-40}
                 dotId="1"
-                title={text.Tech8Title}
-                text={text.Tech8}
+                title={content?.Tech8Title || ""}
+                text={content?.Tech8 || ""}
                 boundsRef={imgRef}
               />
             </GlowDotMobileProvider>
@@ -527,12 +596,13 @@ export default function Test() {
 
         {pg === 11 && (
           <div
-            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${moving === 0 ? "opacity-100" : "opacity-0"
-              }`}
+            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
+              moving === 0 ? "opacity-100" : "opacity-0"
+            }`}
           >
             <h2 className="absolute top-[40%] font-bahnschrift text-4xl md:text-6xl text-[#e0e0e0] px-6 text-center leading-tight max-w-[90vw] mx-auto">
               Go down to learn about our team
-             </h2>
+            </h2>
           </div>
         )}
       </div>

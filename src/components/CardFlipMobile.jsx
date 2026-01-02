@@ -780,7 +780,7 @@ export function CardFlipMobile({
       ? "mt-2 sm:mt-3 text-sm sm:text-base md:text-lg leading-relaxed text-[#e0e0e0]"
       : "text-sm sm:text-base md:text-lg leading-snug text-[#e0e0e0]"
     }>
-      {it.description || "No description provided."}
+      {it.mobileDescription || "No description provided."}
     </p>
   </div>
 

@@ -9,15 +9,31 @@ export default function LoadingSplash({ onDone }) {
   const LOOK = useMemo(
     () => ({
       FLAME_H: "h-[116px] sm:h-[128px] md:h-[140px] lg:h-[156px] xl:h-[168px]",
-      TEXT_H:  "h-[72px]  sm:h-[78px]  md:h-[86px]  lg:h-[94px]  xl:h-[102px]",
+      TEXT_H: "h-[72px]  sm:h-[78px]  md:h-[86px]  lg:h-[94px]  xl:h-[102px]",
       OVERLAP: 50,
       BG_SHIFT_PX: 0,
-      EXIT_MS: 1200, // slower & smoother
+      EXIT_MS: 1200,
+
+      // Tagline timing (total = IN + HOLD + OUT)
+      // Longer presence than before
+      TAGLINE_IN_MS: 1200,
+      TAGLINE_HOLD_MS: 1800,
+      TAGLINE_OUT_MS: 900,
+
+      // Brightness levels for the background image
+      // Dim from the start, tagline lifts it slightly, logo brightens to full.
+      DIM_BRIGHTNESS: 0.3,
+      TAGLINE_BRIGHTNESS: 0.45,
+      FULL_BRIGHTNESS: 1.0,
     }),
     []
   )
 
-  // Timeline (up to "hold"); exit happens only after window has loaded.
+  const TAGLINE_TOTAL =
+    LOOK.TAGLINE_IN_MS + LOOK.TAGLINE_HOLD_MS + LOOK.TAGLINE_OUT_MS
+
+  // Timeline (visuals); exit happens only after window has loaded.
+  // Tagline phase comes before your existing logo sequence.
   const t = useMemo(
     () => ({
       flameIn: 700,
@@ -28,9 +44,13 @@ export default function LoadingSplash({ onDone }) {
     }),
     []
   )
-  const VISUAL_TOTAL = t.flameIn + t.brighten + t.slideLeft + t.wordmarkIn + t.hold
 
-  const [stage, setStage] = useState("flameIn")
+  const VISUAL_TOTAL_CORE =
+    t.flameIn + t.brighten + t.slideLeft + t.wordmarkIn + t.hold
+  const VISUAL_TOTAL = TAGLINE_TOTAL + VISUAL_TOTAL_CORE
+
+  // Stages: tagline -> flameIn -> brighten -> slideLeft -> wordmarkIn -> hold -> exit
+  const [stage, setStage] = useState("tagline")
   const [hidden, setHidden] = useState(false)
 
   // Gates
@@ -53,15 +73,28 @@ export default function LoadingSplash({ onDone }) {
     return () => window.removeEventListener("resize", onResize)
   }, [LOOK.OVERLAP])
 
-  // Orchestrate visuals
+  // Orchestrate visuals (tagline first, then existing sequence)
   useEffect(() => {
-    const id1 = setTimeout(() => setStage("brighten"), t.flameIn)
-    const id2 = setTimeout(() => setStage("slideLeft"), t.flameIn + t.brighten)
-    const id3 = setTimeout(() => setStage("wordmarkIn"), t.flameIn + t.brighten + t.slideLeft)
-    const id4 = setTimeout(() => setStage("hold"), t.flameIn + t.brighten + t.slideLeft + t.wordmarkIn)
+    const base = TAGLINE_TOTAL
+
+    const id0 = setTimeout(() => setStage("flameIn"), TAGLINE_TOTAL)
+    const id1 = setTimeout(() => setStage("brighten"), base + t.flameIn)
+    const id2 = setTimeout(
+      () => setStage("slideLeft"),
+      base + t.flameIn + t.brighten
+    )
+    const id3 = setTimeout(
+      () => setStage("wordmarkIn"),
+      base + t.flameIn + t.brighten + t.slideLeft
+    )
+    const id4 = setTimeout(
+      () => setStage("hold"),
+      base + t.flameIn + t.brighten + t.slideLeft + t.wordmarkIn
+    )
     const id5 = setTimeout(() => setIsVisualsDone(true), VISUAL_TOTAL)
-    return () => [id1, id2, id3, id4, id5].forEach(clearTimeout)
-  }, [t, VISUAL_TOTAL])
+
+    return () => [id0, id1, id2, id3, id4, id5].forEach(clearTimeout)
+  }, [t, TAGLINE_TOTAL, VISUAL_TOTAL])
 
   // Full page load
   useEffect(() => {
@@ -78,6 +111,8 @@ export default function LoadingSplash({ onDone }) {
   useEffect(() => {
     if (!isPageLoaded || !isVisualsDone || hidden) return
     setStage("exit")
+    sessionStorage.setItem("rise_loading_splash_done_v1", "1");
+    window.dispatchEvent(new Event("rise:splashDone"));
     const end = setTimeout(() => {
       setHidden(true)
       if (onDone) onDone()
@@ -87,18 +122,26 @@ export default function LoadingSplash({ onDone }) {
 
   if (hidden) return null
 
-  const isBright =
-    stage === "brighten" ||
-    stage === "slideLeft" ||
-    stage === "wordmarkIn" ||
-    stage === "hold" ||
-    stage === "exit"
+  // Background brightness control:
+  // - tagline: slightly brighter than dim
+  // - pre-brighten stages: dim
+  // - brighten + after: full (current max)
+  const bgBrightness =
+    stage === "tagline"
+      ? LOOK.TAGLINE_BRIGHTNESS
+      : stage === "brighten" ||
+        stage === "slideLeft" ||
+        stage === "wordmarkIn" ||
+        stage === "hold" ||
+        stage === "exit"
+      ? LOOK.FULL_BRIGHTNESS
+      : LOOK.DIM_BRIGHTNESS
 
   const afterBrighten =
     stage === "slideLeft" || stage === "wordmarkIn" || stage === "hold" || stage === "exit"
 
-  const showWordmark =
-    stage === "wordmarkIn" || stage === "hold" || stage === "exit"
+  const showWordmark = stage === "wordmarkIn" || stage === "hold" || stage === "exit"
+  const showTagline = stage === "tagline"
 
   return (
     <div
@@ -109,13 +152,14 @@ export default function LoadingSplash({ onDone }) {
           : afterBrighten
           ? "bg-brand-dark"
           : "bg-[#0a0d0f]",
-        // Switch to keyframe animation for a smoother, GPU path
         stage === "exit" ? "animate-splash-exit" : "",
       ].join(" ")}
       style={{
-        // Pass duration via CSS var so you can tweak in JS without editing CSS
         "--splash-exit-ms": `${LOOK.EXIT_MS}ms`,
-        // Help the compositor
+        "--tagline-ms": `${TAGLINE_TOTAL}ms`,
+        "--tagline-in-ms": `${LOOK.TAGLINE_IN_MS}ms`,
+        "--tagline-hold-ms": `${LOOK.TAGLINE_HOLD_MS}ms`,
+        "--tagline-out-ms": `${LOOK.TAGLINE_OUT_MS}ms`,
         willChange: "transform",
         backfaceVisibility: "hidden",
         WebkitFontSmoothing: "antialiased",
@@ -124,18 +168,28 @@ export default function LoadingSplash({ onDone }) {
       }}
       aria-hidden="true"
     >
+      {/* Local-only tagline animation */}
+      <style>{`
+        @keyframes splashTagline {
+          0%   { opacity: 0; transform: translateY(8px); }
+          ${Math.round((LOOK.TAGLINE_IN_MS / TAGLINE_TOTAL) * 100)}% { opacity: 1; transform: translateY(0px); }
+          ${Math.round(((LOOK.TAGLINE_IN_MS + LOOK.TAGLINE_HOLD_MS) / TAGLINE_TOTAL) * 100)}% { opacity: 1; transform: translateY(0px); }
+          100% { opacity: 0; transform: translateY(-6px); }
+        }
+        .splash-tagline {
+          animation: splashTagline var(--tagline-ms) cubic-bezier(0.2, 0.9, 0.2, 1) both;
+          will-change: opacity, transform;
+        }
+      `}</style>
+
       {/* Background image */}
       <div className="absolute inset-0 overflow-hidden">
         <img
           src={bg}
           alt=""
-          className={[
-            "h-full w-full object-cover",
-            isBright
-              ? "brightness-100 transition-[filter] duration-[1600ms] ease-in-out"
-              : "brightness-[0.3]",
-          ].join(" ")}
+          className="h-full w-full object-cover transition-[filter] duration-[900ms] ease-in-out"
           style={{
+            filter: `brightness(${bgBrightness})`,
             transform: `translateY(${LOOK.BG_SHIFT_PX}px)`,
             willChange: "transform, filter",
           }}
@@ -147,12 +201,24 @@ export default function LoadingSplash({ onDone }) {
 
       {/* Offscreen wordmark for measuring responsive width */}
       <div className="fixed -left-[9999px] -top-[9999px] pointer-events-none">
-        <img ref={measureRef} src={wordmark} alt="" className={LOOK.TEXT_H} onLoad={recalcShift} />
+        <img
+          ref={measureRef}
+          src={wordmark}
+          alt=""
+          className={LOOK.TEXT_H}
+          onLoad={recalcShift}
+        />
       </div>
 
       {/* Centering layer */}
       <div className="absolute inset-0 grid place-items-center">
-        {!showWordmark ? (
+        {showTagline ? (
+          <div className="h-full w-full flex items-center justify-center">
+            <h1 className="splash-tagline font-bahnschrift text-4xl md:text-6xl text-[#e0e0e0] px-6 text-center leading-tight max-w-[70vw] mx-auto drop-shadow-[0_10px_28px_rgba(0,0,0,0.55)]">
+              It&apos;s time for a paradigm shift in chemical manufacturing
+            </h1>
+          </div>
+        ) : !showWordmark ? (
           <img
             src={flame}
             alt="Rise Reforming mark"

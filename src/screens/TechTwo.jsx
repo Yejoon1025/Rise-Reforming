@@ -1,11 +1,42 @@
-import { useRef } from "react"
+import { useRef,useState,useEffect } from "react"
 import bg from "../assets/TechTwo.png"
 import { GlowDotProvider } from "../components/GlowDotProvider"
 import { PinnedGlowDot } from "../components/PinnedGlowDot"
-import { Tech6, Tech7, Tech8, Tech6Title, Tech7Title, Tech8Title} from "../data/PageContent"
+
+const CONTENT_URL =
+  "https://raw.githubusercontent.com/Yejoon1025/rise-content/main/Content.json"
 
 export function TechTwo() {
   const sectionRef = useRef(null)
+
+  const [content, setContent] = useState(null)
+  
+    useEffect(() => {
+      let isMounted = true
+  
+      fetch(CONTENT_URL)
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to load Content.json")
+          return res.json()
+        })
+        .then((data) => {
+          if (isMounted) setContent(data)
+        })
+        .catch((err) => {
+          console.error("Error loading Content.json:", err)
+        })
+  
+      return () => {
+        isMounted = false
+      }
+    }, [])
+
+    const Tech6 = content?.Tech6 ?? ""
+    const Tech7 = content?.Tech7 ?? ""
+    const Tech8 = content?.Tech8 ?? ""
+    const Tech6Title = content?.Tech6Title ?? ""
+    const Tech7Title = content?.Tech7Title ?? ""
+    const Tech8Title = content?.Tech8Title ?? ""
 
   return (
     <section

@@ -314,6 +314,23 @@ export function CardFlip({
     }
   }, [isSweeping, reversed, isIntersecting])
 
+  //Description helper
+    const renderInfoDescription = desc => {
+    if (!desc) return "No description provided."
+
+    if (Array.isArray(desc)) {
+      return desc.map((line, idx) => (
+        <span key={idx}>
+          {line}
+          {idx < desc.length - 1 && <br />}
+        </span>
+      ))
+    }
+
+    // fallback if it's still just a string
+    return desc
+  }
+
   // navigation helpers (use screen-space anchor for rect comparisons)
   function go(delta) {
     const current = getNearestByAnchor(panelsRef.current, getAnchorXScreen())
@@ -410,7 +427,7 @@ export function CardFlip({
     // In-zone click = flip; dismiss the flip hint on first successful flip
     const nextFlip = !flipped[key]
     if (nextFlip && !dismissedFlipHint) setDismissedFlipHint(true)
-    setFlipped(s => ({ ...s, [key]: nextFlip }))
+    //setFlipped(s => ({ ...s, [key]: nextFlip })) //Minimal change to disable flipping, keeps logic. Hint commented below.
   }
 
   // idle sweep
@@ -744,8 +761,37 @@ export function CardFlip({
                   lineHeight: 1.4,
                 }}
               >
-                {activeItem.description || "No description provided."}
+                {renderInfoDescription(activeItem.description)}
               </div>
+
+              {(activeItem.linkedin || activeItem.email) && (
+                          <div
+                            className="absolute left-0 right-0 flex items-center justify-center gap-3"
+                            style={{ bottom: ICONS_HB }}
+                          >
+                            {activeItem.linkedin ? (
+                              <a
+                                href={activeItem.linkedin}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label={`${activeItem.name} LinkedIn`}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg白/20 transition text-white"
+                              >
+                                <Linkedin size={20} strokeWidth={1.75} aria-hidden="true" />
+                              </a>
+                            ) : null}
+
+                            {activeItem.email ? (
+                              <a
+                                href={`mailto:${activeItem.email}`}
+                                aria-label={`Email ${activeItem.name}`}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition text-white"
+                              >
+                                <Mail size={20} strokeWidth={1.75} aria-hidden="true" />
+                              </a>
+                            ) : null}
+                          </div>
+                        )}
             </div>
           </div>
         </div>
@@ -898,38 +944,11 @@ export function CardFlip({
                             ? "mt-2 sm:mt-3 text-sm sm:text-base md:text-lg leading-relaxed text-[#e0e0e0]"
                             : "text-sm sm:text-base md:text-lg leading-snug text-[#e0e0e0]"
                           }>
-                            {it.description || "No description provided."}
+                            {it.quote || " "}
                           </p>
                         </div>
 
-                        {(it.linkedin || it.email) && (
-                          <div
-                            className="absolute left-0 right-0 flex items-center justify-center gap-3"
-                            style={{ bottom: ICONS_HB }}
-                          >
-                            {it.linkedin ? (
-                              <a
-                                href={it.linkedin}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                aria-label={`${it.name} LinkedIn`}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg白/20 transition text-white"
-                              >
-                                <Linkedin size={20} strokeWidth={1.75} aria-hidden="true" />
-                              </a>
-                            ) : null}
-
-                            {it.email ? (
-                              <a
-                                href={`mailto:${it.email}`}
-                                aria-label={`Email ${it.name}`}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition text-white"
-                              >
-                                <Mail size={20} strokeWidth={1.75} aria-hidden="true" />
-                              </a>
-                            ) : null}
-                          </div>
-                        )}
+                        
                       </div>
 
                     </div>
@@ -973,32 +992,14 @@ export function CardFlip({
                                 className={`absolute top-8 ${reversed ? "left-0" : "right-0"} px-2 py-1 rounded bg-black/70 text-[#f8da9c] text-[10px] leading-tight whitespace-nowrap
       opacity-0 transition-opacity duration-200 pointer-events-none group-hover/arrow:opacity-100`}
                               >
-                                Click or use arrow keys
+                                Click to move.
                               </div>
                             </div>
                           )
                         }
                         return null
                       })()}
-
-                      {/* Redo / Flip hint with tooltip (hover the icon) */}
-                      {!isFlipped && !dismissedFlipHint && (
-                        <div
-                          className="group/redo pointer-events-auto absolute right-2 top-2 z-[60]"
-                          onPointerDownCapture={e => e.stopPropagation()}
-                          onClick={() => onCardClick(di, it, true)}
-                          aria-hidden
-                          style={{ filter: "drop-shadow(0 0 8px rgba(248,218,156,0.35))" }}
-                        >
-                          <RotateCw className="w-6 h-6 text-[#f8da9c]" strokeWidth={2} />
-                          <div
-                            className="absolute top-7 right-0 px-2 py-1 rounded bg-black/70 text-[#f8da9c] text-[10px] leading-tight whitespace-nowrap
-                     opacity-0 transition-opacity duration-200 pointer-events-none group-hover/redo:opacity-100"
-                          >
-                            Click to Flip
-                          </div>
-                        </div>
-                      )}
+                      
                     </div>
                   )}
                 </div>
@@ -1040,3 +1041,25 @@ function computeCardWidth(vw, preferred) {
   const maxOneCol = Math.max(220, vw - (gutter * 2))
   return Math.round(vw < 640 ? Math.min(preferred, maxOneCol) : Math.min(preferred, maxTwoCol))
 }
+
+
+/*
+Redo / Flip hint with tooltip (hover the icon)
+{!isFlipped && !dismissedFlipHint && (
+  <div
+    className="group/redo pointer-events-auto absolute right-2 top-2 z-[60]"
+    onPointerDownCapture={e => e.stopPropagation()}
+    onClick={() => onCardClick(di, it, true)}
+    aria-hidden
+    style={{ filter: "drop-shadow(0 0 8px rgba(248,218,156,0.35))" }}
+  >
+    <RotateCw className="w-6 h-6 text-[#f8da9c]" strokeWidth={2} />
+    <div
+      className="absolute top-7 right-0 px-2 py-1 rounded bg-black/70 text-[#f8da9c] text-[10px] leading-tight whitespace-nowrap
+opacity-0 transition-opacity duration-200 pointer-events-none group-hover/redo:opacity-100"
+    >
+      Click to Flip
+    </div>
+  </div>
+)}
+*/

@@ -1,11 +1,45 @@
-import { useRef } from "react"
+import { useRef,useState,useEffect } from "react"
 import { GlowDotProvider } from "../components/GlowDotProvider"
 import { PinnedGlowDot } from "../components/PinnedGlowDot"
 import bg from "../assets/TechOne.png"
-import { Tech1,Tech2,Tech3,Tech4,Tech5, Tech1Title, Tech2Title, Tech5Title} from "../data/PageContent"
+
+const CONTENT_URL =
+  "https://raw.githubusercontent.com/Yejoon1025/rise-content/main/Content.json"
 
 export default function TechOverlayTwo({ containerRef }) {
   const sectionRef = containerRef
+
+  const [content, setContent] = useState(null)
+  
+    useEffect(() => {
+      let isMounted = true
+  
+      fetch(CONTENT_URL)
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to load Content.json")
+          return res.json()
+        })
+        .then((data) => {
+          if (isMounted) setContent(data)
+        })
+        .catch((err) => {
+          console.error("Error loading Content.json:", err)
+        })
+  
+      return () => {
+        isMounted = false
+      }
+    }, [])
+
+    const Tech1 = content?.Tech1 ?? ""
+    const Tech2 = content?.Tech2 ?? ""
+    const Tech3 = content?.Tech3 ?? ""
+    const Tech4 = content?.Tech4 ?? ""
+    const Tech5 = content?.Tech5 ?? ""
+    const Tech1Title = content?.Tech1Title ?? ""
+    const Tech2Title = content?.Tech2Title ?? ""
+    const Tech5Title = content?.Tech5Title ?? ""
+
 
   return (
       

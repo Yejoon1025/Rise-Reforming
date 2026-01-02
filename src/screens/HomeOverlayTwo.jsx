@@ -1,12 +1,41 @@
-import { useRef } from "react"
+import { useRef,useState,useEffect } from "react"
 import { GlowDotProvider } from "../components/GlowDotProvider"
 import { PinnedGlowDot } from "../components/PinnedGlowDot"
 import bg from "../assets/HomeOneLight.png"
-import { Home1,Home2,Home3 } from "../data/PageContent"
+
+const CONTENT_URL =
+  "https://raw.githubusercontent.com/Yejoon1025/rise-content/main/Content.json"
 
 
 export default function OverlayTwo({ containerRef }) {
   const sectionRef = containerRef
+
+  const [content, setContent] = useState(null)
+
+  useEffect(() => {
+    let isMounted = true
+
+    fetch(CONTENT_URL)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load Content.json")
+        return res.json()
+      })
+      .then((data) => {
+        if (isMounted) setContent(data)
+      })
+      .catch((err) => {
+        console.error("Error loading Content.json:", err)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  const Home1 = content?.Home1 ?? ""
+  const Home2 = content?.Home2 ?? ""
+  const Home3 = content?.Home3 ?? ""
+
 
   return (
       

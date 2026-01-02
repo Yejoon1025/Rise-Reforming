@@ -1,11 +1,39 @@
-import { useRef } from "react"
+import { useRef,useState,useEffect } from "react"
 import bg from "../assets/HomeTwo.png"
 import { GlowDotProvider } from "../components/GlowDotProvider"
 import { PinnedGlowDot } from "../components/PinnedGlowDot"
-import { Home4, Home5, Home4Title} from "../data/PageContent"
+
+const CONTENT_URL =
+  "https://raw.githubusercontent.com/Yejoon1025/rise-content/main/Content.json"
 
 export function HomeTwo() {
   const sectionRef = useRef(null)
+
+  const [content, setContent] = useState(null)
+  
+    useEffect(() => {
+      let isMounted = true
+  
+      fetch(CONTENT_URL)
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to load Content.json")
+          return res.json()
+        })
+        .then((data) => {
+          if (isMounted) setContent(data)
+        })
+        .catch((err) => {
+          console.error("Error loading Content.json:", err)
+        })
+  
+      return () => {
+        isMounted = false
+      }
+    }, [])
+  
+    const Home4 = content?.Home4 ?? ""
+    const Home5 = content?.Home5 ?? ""
+    const Home4Title = content?.Home4Title ?? ""
 
   return (
     <section

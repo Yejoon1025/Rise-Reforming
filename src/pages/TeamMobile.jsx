@@ -10,8 +10,10 @@ import * as text from "../data/PageContent";
 import MobileNavbar from "../components/MobileNavbar";
 import { ChevronDown } from "lucide-react";
 import { CardFlipMobile } from "../components/CardFlipMobile";
-import { ADVISORS, EXEC } from "../data/Profiles"
 
+// Remote profile JSON
+const PROFILE_URL =
+  "https://raw.githubusercontent.com/Yejoon1025/rise-content/main/Profile.json";
 
 export default function Test() {
   const maxPg = 3; // minus one
@@ -45,6 +47,28 @@ export default function Test() {
 
   const navigate = useNavigate();
 
+  // --- Profiles fetched from remote JSON ---
+  const [exec, setExec] = useState([]);
+  const [advisors, setAdvisors] = useState([]);
+
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      try {
+        const res = await fetch(PROFILE_URL);
+        if (!res.ok) {
+          throw new Error(`Failed to fetch profiles: ${res.status}`);
+        }
+        const data = await res.json();
+        setExec(data.EXEC || []);
+        setAdvisors(data.ADVISORS || []);
+      } catch (err) {
+        console.error("Error loading profiles from GitHub (mobile):", err);
+      }
+    };
+
+    fetchProfiles();
+  }, []);
+
   // --- Viewport-fit: eliminate mobile overscroll + toolbar jitter
   useEffect(() => {
     // Prevent scroll chaining / rubber banding
@@ -54,7 +78,10 @@ export default function Test() {
     // Ensure the app fully pins to the viewport height
     const setVh = () => {
       // modern browsers support dvh; keep a fallback anyway
-      document.documentElement.style.setProperty("--app-dvh", `${window.innerHeight}px`);
+      document.documentElement.style.setProperty(
+        "--app-dvh",
+        `${window.innerHeight}px`
+      );
     };
     setVh();
     window.addEventListener("resize", setVh);
@@ -80,11 +107,14 @@ export default function Test() {
   }, []);
 
   const goDown = useCallback(() => {
-    if (pg === maxPg) {navigate("/news")};
+    if (pg === maxPg) {
+      navigate("/news");
+      return;
+    }
     setMoving(1);
     setOffset(calcOffset(pos[pg + 1]));
     setPg(pg + 1);
-  }, [pg]);
+  }, [pg, navigate]);
 
   const goUp = useCallback(() => {
     if (pg === 0) return;
@@ -94,7 +124,8 @@ export default function Test() {
   }, [pg]);
 
   const currentXP = () => {
-    const xPercentage = ((0.5 * width) - offset - window.innerWidth / 2) / width;
+    const xPercentage =
+      (0.5 * width - offset - window.innerWidth / 2) / width;
     return xPercentage;
   };
 
@@ -142,21 +173,26 @@ export default function Test() {
   const gestureTriggeredRef = useRef(false);
   const touchStart = useRef({ x: null, y: null });
 
-  const tryTriggerSwipe = useCallback((dy, dx) => {
-    const now = performance.now();
-    if (now - (lastScrollTsRef.current || 0) < THROTTLE_MS) return false;
+  const tryTriggerSwipe = useCallback(
+    (dy, dx) => {
+      const now = performance.now();
+      if (now - (lastScrollTsRef.current || 0) < THROTTLE_MS) return false;
 
-    const absDy = Math.abs(dy);
-    const absDx = Math.abs(dx);
-    const isVertical = absDy >= SWIPE_THRESHOLD_PX && absDy > absDx * VERTICAL_DOMINANCE_RATIO;
+      const absDy = Math.abs(dy);
+      const absDx = Math.abs(dx);
+      const isVertical =
+        absDy >= SWIPE_THRESHOLD_PX &&
+        absDy > absDx * VERTICAL_DOMINANCE_RATIO;
 
-    if (!isVertical) return false;
+      if (!isVertical) return false;
 
-    lastScrollTsRef.current = now;
-    if (dy > 0) goUp();
-    else goDown();
-    return true;
-  }, [goDown, goUp]);
+      lastScrollTsRef.current = now;
+      if (dy > 0) goUp();
+      else goDown();
+      return true;
+    },
+    [goDown, goUp]
+  );
 
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -188,7 +224,12 @@ export default function Test() {
     };
     const onTouchMove = (e) => {
       const ts = touchStart.current;
-      if (ts.x == null || ts.y == null || gestureTriggeredRef.current) return;
+      if (
+        ts.x == null ||
+        ts.y == null ||
+        gestureTriggeredRef.current
+      )
+        return;
 
       const dx = (e.touches?.[0]?.clientX ?? ts.x) - ts.x;
       const dy = (e.touches?.[0]?.clientY ?? ts.y) - ts.y;
@@ -261,17 +302,19 @@ export default function Test() {
       className="fixed inset-0 overflow-hidden bg-black"
       style={{
         height: "var(--app-dvh, 100dvh)", // uses innerHeight; falls back to 100dvh
-        touchAction: "none",              // tells UA we’ll handle gestures
+        touchAction: "none", // tells UA we’ll handle gestures
       }}
     >
-      <div className = "z-100"><MobileNavbar /></div>
+      <div className="z-100">
+        <MobileNavbar />
+      </div>
       {/* Page number display */}
       <div className="absolute bottom-2 left-2 z-20 text-white text-sm font-bahnschrift">
         {pg + 1}/{maxPg + 1}
       </div>
       <div className="absolute left-1/2 top-0 -translate-x-1/2 z-0">
         <AnimatePresence initial={false} mode="sync">
-            <motion.img key="bg1" ref={imgRef} src={bg1} alt="" {...imgCommon} />
+          <motion.img key="bg1" ref={imgRef} src={bg1} alt="" {...imgCommon} />
         </AnimatePresence>
       </div>
 
@@ -286,11 +329,15 @@ export default function Test() {
               Our Team
             </h1>
             <button
-                aria-label="Continue"
-                className="p-2 hover:opacity-80 transition-opacity absolute top-[85%]"
-              >
-                <ChevronDown className="text-[#f8da9c] animate-bounce" size={32} />
-              </button>
+              onClick={goDown}
+              aria-label="Continue"
+              className="p-2 hover:opacity-80 transition-opacity absolute top-[85%]"
+            >
+              <ChevronDown
+                className="text-[#f8da9c] animate-bounce"
+                size={32}
+              />
+            </button>
           </div>
         )}
 
@@ -301,7 +348,7 @@ export default function Test() {
             }`}
           >
             <CardFlipMobile
-              items={EXEC}
+              items={exec}
               color="#3ca6a6"
               progressColor="#3ca6a6"
               dotSize={12}
@@ -322,17 +369,17 @@ export default function Test() {
               moving === 0 ? "opacity-100" : "opacity-0"
             }`}
           >
-              <CardFlipMobile
-                items={ADVISORS}
-                color="#3ca6a6"
-                progressColor="#3ca6a6"
-                dotSize={12}
-                cardWidth={250}
-                overlapPx={-20}
-                anchorXRatio={0.5}
-                anchorYRatio={0.2}
-              />
-              <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-20 text-[#f8da9c] text-xl font-bahnschrift">
+            <CardFlipMobile
+              items={advisors}
+              color="#3ca6a6"
+              progressColor="#3ca6a6"
+              dotSize={12}
+              cardWidth={250}
+              overlapPx={-20}
+              anchorXRatio={0.5}
+              anchorYRatio={0.2}
+            />
+            <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-20 text-[#f8da9c] text-xl font-bahnschrift">
               Advisors
             </div>
           </div>
@@ -346,15 +393,18 @@ export default function Test() {
           >
             <h2 className="absolute top-[25%] font-bahnschrift text-4xl md:text-6xl text-[#e0e0e0] px-6 text-center leading-tight max-w-[90vw] mx-auto">
               Swipe down to learn about our timeline
-             </h2>
-              {/* Chevron icon button */}
-              <button
-                onClick={() => navigate("/team")}
-                aria-label="Continue"
-                className="p-2 hover:opacity-80 transition-opacity absolute top-[85%]"
-              >
-                <ChevronDown className="text-[#f8da9c] animate-bounce" size={32} />
-              </button>
+            </h2>
+            {/* Chevron icon button */}
+            <button
+              onClick={() => navigate("/team")}
+              aria-label="Continue"
+              className="p-2 hover:opacity-80 transition-opacity absolute top-[85%]"
+            >
+              <ChevronDown
+                className="text-[#f8da9c] animate-bounce"
+                size={32}
+              />
+            </button>
           </div>
         )}
       </div>

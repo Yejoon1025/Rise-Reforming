@@ -4,7 +4,12 @@ import bg from "../assets/NewsDark.png";
 import overlayBg from "../assets/NewLight.png";
 import { TimeLineMobile } from "../components/TimeLineMobile";
 import MobileNavbar from "../components/MobileNavbar";
-import { newsTimelineItems } from "../data/NewsItems";
+// ❌ remove this:
+// import { newsTimelineItems } from "../data/NewsItems";
+
+// ✅ same JSON URL you use in News.jsx
+const DATA_URL =
+  "https://raw.githubusercontent.com/Yejoon1025/rise-content/main/News.json";
 
 export default function News() {
   const timelineRef = useRef(null);
@@ -16,6 +21,11 @@ export default function News() {
   // Two layers (A/B) and which one is visible
   const [active, setActive] = useState(0);
   const [srcs, setSrcs] = useState([targetSrc, targetSrc]);
+
+  // ✅ state for remote items
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Crossfade when target changes (no loops, no flash)
   useEffect(() => {
@@ -61,6 +71,36 @@ export default function News() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // ✅ fetch items from JSON
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function load() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const res = await fetch(DATA_URL, { signal: controller.signal });
+        if (!res.ok) {
+          throw new Error(`Failed to load news: ${res.status} ${res.statusText}`);
+        }
+
+        const data = await res.json();
+        setItems(data);
+      } catch (err) {
+        if (err.name === "AbortError") return;
+        console.error(err);
+        setError("Could not load news timeline.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    load();
+
+    return () => controller.abort();
+  }, []);
+
   return (
     <div className="relative min-h-screen w-full">
       {/* Background stack – fixed to viewport */}
@@ -104,14 +144,28 @@ export default function News() {
       </section>
 
       <section ref={timelineRef} className="relative z-10">
-        <TimeLineMobile
-          items={newsTimelineItems}
-          backgroundUrl={bg}
-          overlayUrl={overlayBg}
-          color="#3ca6a6"
-          dotSize={12}
-          cardWidth={420}
-        />
+        {loading && (
+          <div className="py-10 text-center text-sm text-gray-300">
+            Loading timeline…
+          </div>
+        )}
+
+        {error && (
+          <div className="py-10 text-center text-sm text-red-400">
+            {error}
+          </div>
+        )}
+
+        {!loading && !error && (
+          <TimeLineMobile
+            items={items}
+            backgroundUrl={bg}
+            overlayUrl={overlayBg}
+            color="#3ca6a6"
+            dotSize={12}
+            cardWidth={420}
+          />
+        )}
       </section>
     </div>
   );

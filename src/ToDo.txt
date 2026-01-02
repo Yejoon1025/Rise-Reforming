@@ -1,34 +1,26 @@
-Gesture: More robust and obvious, more uniform
-//1. Get rid of opening mechanism for textboxes - auto open - all at once?
-//1. Get rid of scrolling, change to arrow and button - On computer
+Done:
+- Movement
+- New opening - Explain Animation X
+- New logo
+- Scrolling for team and news
+- Instructions for each page
+- Get rid of flipping, Move icons
+- Favicon
+- Edge limit, Arrows, Lighting, Button to Tech Page
 
-Team page - get rid of page, add buttons
+To Do:
+- //Prettier graphics models
+- //Better Quests / Text on Game
+- //Additional Things to game
+- Seperate components
 
+- Phone font
+- Fix mobile card and timeline (More robust)
+- Maybe add scrolling back, with opening pause.
+- Move game data online too
 
-Robustness and smoothness, can still add!
+Cancelled:
+- Textbox order / textbox numbers
+- Delay page when opening
 
-Card - Click only, Arrows to move.
-Get rid of scroll
-
-
-News - get rid of scroll and add buttons
-
-
-2. 
-3. Consistent keys, instructions clearer
-4. Spam buffer
-
-Phone: Just down gesture too?
-Cards and News remake - Make more robust
-6. Looks - Keeping menu, Phone fonts, Team Page, Advisor Logos
-2. Aesthetics - Keeping menu on news page, Phone fonts, Team Page - Need to think about how to make it prettier, Advisor Logos
-Later: Favicon, Cards auto flip, Swipe Buffer, Update method (site data)
-
-
----
-
-Content:
-1. Headshot, Pictures
-2. Bios
-3. News Link
-4. "9 LOIs, 4 pilot site/supply MOUs, and 1 pilot purchase agreement signed"
+Replace new homepage

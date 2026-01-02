@@ -1,0 +1,145 @@
+{
+  "EXEC": [
+    {
+      "id": "1",
+      "name": "George Rose",
+      "title": "Co-Founder / CEO",
+      "photo": {
+        "src": "https://raw.githubusercontent.com/Yejoon1025/rise-content/main/images/George.jpg",
+        "alt": "George"
+      },
+      "description": [
+        "- UChicago Molecular Engineering",
+        "- Prev. at Mantel and Highland Electric Fleets",
+        "- From Boston, MA"
+      ],
+      "mobileDescription": "UChicago Molecular Engineer with previous experience at Mantel and Highland Electric Fleets",
+      "quote": "",
+      "linkedin": "https://www.linkedin.com/in/george-rose25/",
+      "email": "george@rise-reforming.com"
+    },
+    {
+      "id": "2",
+      "name": "Lucas Zubillaga",
+      "title": "Co-Founder / CTO",
+      "photo": {
+        "src": "https://raw.githubusercontent.com/Yejoon1025/rise-content/main/images/Lucas.png",
+        "alt": "Lucas"
+      },
+      "description": [
+        "- UChicago Molecular Engineering and Physics",
+        "- Prev. at Iberdrola/Avangrid and Argonne National Laboratory",
+        "- From Madrid, Spain"
+      ],
+      "mobileDescription": "UChicago Molecular Engineer with previous experience at Iberdrola/Avangrid and Argonne National Laboratory",
+      "quote": "",
+      "linkedin": "https://www.linkedin.com/in/lucaszubillagamaharg/",
+      "email": "lucas@rise-reforming.com"
+    },
+    {
+      "id": "3",
+      "name": "Jona van Oord",
+      "title": "Co-Founder / COO",
+      "photo": {
+        "src": "https://raw.githubusercontent.com/Yejoon1025/rise-content/main/images/Jona.png",
+        "alt": "Jona"
+      },
+      "description": [
+        "- UChicago Molecular Engineering",
+        "- Prev. at Patel Lab Pritzker School of Molecular Engineering",
+        "- From Maastricht, The Netherlands"
+      ],
+      "mobileDescription": "UChicago Molecular Engineer with previous experience at Patel Lab Pritzker School of Molecular Engineering",
+      "quote": "",
+      "linkedin": "https://www.linkedin.com/in/jonavanoord/ ",
+      "email": "jona@rise-reforming.com"
+    },
+    {
+      "id": "4",
+      "name": "Konstantina (Nina) Kritikos",
+      "title": "Founding Process Engineer",
+      "photo": {
+        "src": "https://raw.githubusercontent.com/Yejoon1025/rise-content/main/images/Nina.png",
+        "alt": "Nina"
+      },
+      "description": [
+        "- Northwestern Chemical Engineering",
+        "- Prev. at AIRCO/Air Company",
+        "- From Chicago, IL"
+      ],
+      "mobileDescription": "Northwestern Chemical Engineer with previous experience at AIRCO/Air Company",
+      "quote": "",
+      "linkedin": " https://www.linkedin.com/in/konstantina-kritikos-99a086186/",
+      "email": "nina@rise-reforming.com"
+    }
+  ],
+  "ADVISORS": [
+    {
+      "id": "1",
+      "name": "Dr. Jack Lewnard",
+      "title": [
+        "Scientific Advisor"
+      ],
+      "photo": {
+        "src": "https://raw.githubusercontent.com/Yejoon1025/rise-content/main/images/Jack.jpg",
+        "alt": "Jack"
+      },
+      "description": [
+        "- Former Program Director at DOE ARPA-E",
+        "- Former CTO at Gas Technology Institute (GTI)"
+      ],
+      "mobileDescription": "Former program director at DOE ARPA-E, Former CTO at Gas Technology Institute",
+      "quote": "",
+      "linkedin": "https://www.linkedin.com/in/jacklewnard/",
+      "email": "jlewnard@gmail.com"
+    },
+    {
+      "id": "2",
+      "name": "Dr. Mark Stoykovich",
+      "title": [
+        "Scientific Advisor"
+      ],
+      "photo": {
+        "src": "https://raw.githubusercontent.com/Yejoon1025/rise-content/main/images/Mark.png",
+        "alt": "Mark"
+      },
+      "mobileDescription": "Director of Undergraduate Study at University of Chicago Molecular Engineering Department",
+      "quote": "",
+      "description": "- University of Chicago Molecular Engineering Senior Instructional Professor & Director of Undergraduate Studies",
+      "email": "stoykovich@uchicago.edu"
+    },
+    {
+      "id": "3",
+      "name": "Richard Penning",
+      "title": "Business Advisor",
+      "photo": {
+        "src": "https://raw.githubusercontent.com/Yejoon1025/rise-content/main/images/Richard.jpg",
+        "alt": "Richard"
+      },
+      "description": [
+        "- Former General Manager at Catalysts, UOP LLC",
+        "- Advisor to Nanograf and Numat Technologies"
+      ],
+      "mobileDescription": "Former General Manager at Catalysts, UOP LLC, Current Advisor to Nanograf and Numat Technologies",
+      "quote": "",
+      "linkedin": "https://www.linkedin.com/in/richard-penning-57007b1/",
+      "email": "penning.richard@gmail.com"
+    },
+    {
+      "id": "4",
+      "name": "Bill Frauenheim",
+      "title": "Industry Liaison",
+      "photo": {
+        "src": "https://raw.githubusercontent.com/Yejoon1025/rise-content/main/images/Bill.png",
+        "alt": "Bill"
+      },
+      "description": [
+        "- VP of Operations at Diversified CPC (largest aerosol propellant manufacturer in North America)"
+      ],
+      "mobileDescription": "VP of Operations at Diversified CPC",
+      "quote": "",
+      "linkedin": "https://www.linkedin.com/in/bill-frauenheim-1320744/",
+      "email": "bfrauenheim@diversifiedcpc.com"
+    }
+  ]
+}

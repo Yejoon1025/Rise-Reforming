@@ -85,3 +85,21 @@
 .animate-bounce-x {
   animation: bounce-x 1s infinite;
 }
+
+/* Hide the main page scrollbar but keep scrolling working */
+html,
+body {
+  /* keep normal scrolling behavior */
+  margin: 0;
+  padding: 0;
+
+  /* Firefox */
+  scrollbar-width: none;
+}
+
+/* Chrome / Edge / Safari */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
