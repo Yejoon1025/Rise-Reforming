@@ -11,6 +11,13 @@ import TechOverlayTwo from '../screens/TechOverlayTwo.jsx'
 import * as T from '../components/Transitions.jsx'
 import { ChevronRight, ChevronUp, ChevronDown } from 'lucide-react'
 import Bright from '../assets/TechOne.png'
+
+// NEW: listen to GlowDotProvider global open lifecycle events
+import {
+  GLOWDOTS_OPENING_STARTED_EVENT,
+  GLOWDOTS_OPENING_FINISHED_EVENT,
+} from '../components/GlowDotProvider.jsx'
+
 const TRANSITIONS = { ...T }
 
 // ---- CODE CONFIG (code-side "menu") ---------------------------------
@@ -25,10 +32,8 @@ const DOT_SECTIONS = [
 ]
 
 // Choose what animation should happen when clicking each dot.
-// Use names from your TRANSITIONS export (e.g., 'slideIn', 'slideOut', 'zoomIn', 'zoomOut').
-// Special case: when going 0 -> 1, we use the overlay mover (overlaySlide) regardless.
 const DOT_TRANSITIONS = {
-  1: 'crossFade', // any non-overlay → overlay2
+  1: 'crossFade',
   2: 'crossFade',
 }
 // --------------------------------------------------------------------
@@ -58,17 +63,15 @@ function useAnimLock() {
   return { isAnimating, start }
 }
 
-// === NEW: overlay slide that emulates your example ===================
+// === overlay slide ===================================================
 // Uses a single mover that contains both overlays stacked vertically.
 // We translate the mover between 0 and -100% of viewport height.
 // Bright image fades in/out at the same time.
 function overlaySlide({ moverEl, direction = 'down', brightEl, onDone }) {
   if (!moverEl) { onDone && onDone(); return }
 
-  // Ensure transition classes exist
   moverEl.classList.add('transition-transform','duration-700','ease-out')
 
-  // Bright image fade sync
   if (brightEl) {
     brightEl.classList.add('transition-opacity','duration-700','ease-out')
     if (direction === 'down') {
@@ -80,15 +83,11 @@ function overlaySlide({ moverEl, direction = 'down', brightEl, onDone }) {
     }
   }
 
-  // Start position assumed to match current visual state.
-  // Animate mover to target state.
   requestAnimationFrame(() => {
     if (direction === 'down') {
-      // overlay1 -> overlay2
       moverEl.classList.remove('translate-y-0')
       moverEl.classList.add('-translate-y-full')
     } else {
-      // overlay2 -> overlay1
       moverEl.classList.remove('-translate-y-full')
       moverEl.classList.add('translate-y-0')
     }
@@ -98,14 +97,12 @@ function overlaySlide({ moverEl, direction = 'down', brightEl, onDone }) {
   const finish = () => {
     if (finished) return
     finished = true
-    // Keep classes for resting state; no hidden toggles needed.
     onDone && onDone()
   }
 
   moverEl.addEventListener('transitionend', finish, { once: true })
-  setTimeout(finish, DURATION_MS + 200) // fallback
+  setTimeout(finish, DURATION_MS + 200)
 }
-// =====================================================================
 
 // Transition runner with fallback
 function runTransition({ name, fromEl, toEl, onDone }) {
@@ -129,7 +126,7 @@ function runTransition({ name, fromEl, toEl, onDone }) {
 // ROUTE INDEX:
 // 0 = overlay1, 1 = overlay2, 2 = screen2
 export default function Tecyh() {
-    const navigate = useNavigate();
+  const navigate = useNavigate()
 
   // Screen 1 GROUP (moves as one)
   const s1GroupRef = useRef(null)
@@ -149,20 +146,21 @@ export default function Tecyh() {
   const [at, setAt] = useState(0)
   const { isAnimating, start } = useAnimLock()
 
+  // NEW: hide arrows & disable key nav only while *sequential* opening is actually running
+  const [isSequentialOpening, setIsSequentialOpening] = useState(false)
+
   // Map an index to its root element
   function getRefFor(idx) {
-    if (idx === 0 || idx === 1) return s1GroupRef.current // overlay1/overlay2 live in the S1 group
+    if (idx === 0 || idx === 1) return s1GroupRef.current
     if (idx === 2) return s2Ref.current
     return null
   }
 
   // Prep Screen 1 group so that when it becomes visible, it's already at overlay2 (bright shown)
   function prepS1ForOverlay2() {
-    // show the S1 group container
     s1GroupRef.current?.classList.remove('hidden')
     baseS1Ref.current?.classList.remove('hidden')
 
-    // mover at overlay2 (up) & bright visible
     overlayMoverRef.current?.classList.add('-translate-y-full')
     overlayMoverRef.current?.classList.remove('translate-y-0')
     brightRef.current?.classList.add('opacity-100')
@@ -179,7 +177,6 @@ export default function Tecyh() {
 
     const fromEl = getRefFor(at)
 
-    // Special: overlay1 (0) -> overlay2 (1) uses the mover slide (matches your overlay behavior)
     if (at === 0 && target === 1) {
       overlaySlide({
         moverEl: overlayMoverRef.current,
@@ -190,21 +187,17 @@ export default function Tecyh() {
       return
     }
 
-    // Prepare destination screen
     const toEl = getRefFor(target)
-    if (target === 1) prepS1ForOverlay2() // make sure overlay2 is the visible state
+    if (target === 1) prepS1ForOverlay2()
 
-    // Pick the single transition to use (per-dot). Defaults to 'slideIn' if unknown.
     const chosen = DOT_TRANSITIONS[target] || 'slideIn'
 
-    // Show target (if your transition needs it) and run one transition
     toEl?.classList.remove('hidden')
     runTransition({
       name: chosen,
       fromEl,
       toEl,
       onDone: () => {
-        // Hide non-target screens defensively
         if (target !== 2) s2Ref.current?.classList.add('hidden')
         if (target !== 1) s1GroupRef.current?.classList.add('hidden')
         setAt(target)
@@ -213,58 +206,6 @@ export default function Tecyh() {
     })
   }, [at, start])
 
-  // Jump helper: set DOM to the correct resting state for a target index.
-  // Targets: 1 = overlay2, 2 = screen2.
-  // When at === 0 (first overlay), all dots render empty (no "active" dot).
-  const jumpTo = (target) => {
-    if (![1,2].includes(target)) return
-
-    // Hide everything first
-    s1GroupRef.current?.classList.add('hidden')
-    s2Ref.current?.classList.add('hidden')
-
-    // Reset bright/overlay mover to a safe baseline
-    if (brightRef.current) {
-      brightRef.current.classList.remove('transition-opacity','duration-700','ease-out')
-    }
-    if (overlayMoverRef.current) {
-      overlayMoverRef.current.classList.remove('transition-transform','duration-700','ease-out')
-    }
-
-    if (target === 1) {
-      // Show Screen 1 group with overlay2 visible
-      s1GroupRef.current?.classList.remove('hidden')
-      baseS1Ref.current?.classList.remove('hidden')
-
-      // mover at overlay2 (up) & bright visible
-      overlayMoverRef.current?.classList.add('-translate-y-full')
-      overlayMoverRef.current?.classList.remove('translate-y-0')
-
-      brightRef.current?.classList.add('opacity-100')
-      brightRef.current?.classList.remove('opacity-0')
-
-      setAt(1)
-      return
-    }
-
-    if (target === 2) {
-      s2Ref.current?.classList.remove('hidden')
-      // ensure bright is hidden to avoid ghosting
-      brightRef.current?.classList.add('opacity-0')
-      brightRef.current?.classList.remove('opacity-100')
-      setAt(2)
-      return
-    }
-  }
-
-  // Which dot should appear “active”?
-  // On first overlay (at === 0), return null so ALL dots appear empty.
-  const activeDot = at === 0 ? null : at
-
-
-  // Replace with your asset or import it
-  const BRIGHT_IMAGE_SRC = '/TechOne.png'
-
   // Initial visibility
   useEffect(() => {
     s1GroupRef.current?.classList.remove('hidden')
@@ -272,13 +213,11 @@ export default function Tecyh() {
 
     s2Ref.current?.classList.add('hidden')
 
-    // Bright image starts hidden at Overlay 1
     if (brightRef.current) {
       brightRef.current.classList.add('opacity-0')
       brightRef.current.classList.remove('opacity-100')
     }
 
-    // Overlay mover starts at first overlay
     if (overlayMoverRef.current) {
       overlayMoverRef.current.classList.add('translate-y-0')
       overlayMoverRef.current.classList.remove('-translate-y-full')
@@ -287,12 +226,32 @@ export default function Tecyh() {
     containerRef.current?.focus()
   }, [])
 
+  // NEW: listen for sequential opening lifecycle and hide arrows only during it.
+  // Provider will NOT emit "sequence-start" if all visible dots are already open.
+  useEffect(() => {
+    function onOpeningStarted(e) {
+      const reason = e?.detail?.reason
+      if (reason === 'sequence-start') setIsSequentialOpening(true)
+    }
+    function onOpeningFinished(e) {
+      const reason = e?.detail?.reason
+      if (reason === 'sequence-finished') setIsSequentialOpening(false)
+      if (reason && reason !== 'sequence-start') setIsSequentialOpening(false)
+    }
+
+    window.addEventListener(GLOWDOTS_OPENING_STARTED_EVENT, onOpeningStarted)
+    window.addEventListener(GLOWDOTS_OPENING_FINISHED_EVENT, onOpeningFinished)
+    return () => {
+      window.removeEventListener(GLOWDOTS_OPENING_STARTED_EVENT, onOpeningStarted)
+      window.removeEventListener(GLOWDOTS_OPENING_FINISHED_EVENT, onOpeningFinished)
+    }
+  }, [])
+
   const goDown = useCallback(() => {
     const finishLock = start()
     if (!finishLock) return
 
     if (at === 0) {
-      // overlay1 -> overlay2 (slide-reveal + fade-in bright)
       overlaySlide({
         moverEl: overlayMoverRef.current,
         brightEl: brightRef.current,
@@ -303,7 +262,6 @@ export default function Tecyh() {
     }
 
     if (at === 1) {
-      // Screen1 group (overlay2 visible) -> Screen2
       if (brightRef.current) {
         brightRef.current.classList.add('transition-opacity','duration-700','ease-out')
         brightRef.current.classList.remove('opacity-100')
@@ -326,7 +284,6 @@ export default function Tecyh() {
     if (!finishLock) return
 
     if (at === 2) {
-      // Prepare Screen1 group to show overlay2 on arrival
       if (overlayMoverRef.current) {
         overlayMoverRef.current.classList.add('-translate-y-full')
         overlayMoverRef.current.classList.remove('translate-y-0')
@@ -346,7 +303,6 @@ export default function Tecyh() {
     }
 
     if (at === 1) {
-      // overlay2 -> overlay1 (slide-reveal back + fade-out bright)
       overlaySlide({
         moverEl: overlayMoverRef.current,
         brightEl: brightRef.current,
@@ -359,25 +315,28 @@ export default function Tecyh() {
     finishLock()
   }, [at, start])
 
-  // Navigation input handlers (respect the single-flight lock)
+  // Navigation input handlers
   useEffect(() => {
     function onKeyNav(e) {
+      // NEW: disable keys during sequential opening
+      if (isSequentialOpening) return
+
       if (isAnimating) return
       if (e.key === 'ArrowDown' || e.key === 'PageDown') { e.preventDefault(); goDown() }
       if (e.key === 'ArrowUp' || e.key === 'PageUp') { e.preventDefault(); goUp() }
-      if (e.key === 'ArrowRight' && at === 2) {e.preventDefault(); navigate('/team')}
+      if (e.key === 'ArrowRight' && at === 2) { e.preventDefault(); navigate('/team') }
     }
-    const el = containerRef.current
     window.addEventListener('keydown', onKeyNav, { passive: false })
     return () => {
       window.removeEventListener('keydown', onKeyNav)
     }
-  }, [goDown, goUp, isAnimating])
+  }, [goDown, goUp, isAnimating, isSequentialOpening, at, navigate])
 
-  // Global blockers while animating (keys, wheel, touch)
+  // Global blockers while animating OR during sequential opening
   useEffect(() => {
     function block(e) {
-      if (!isAnimating) return
+      if (!isAnimating && !isSequentialOpening) return
+
       e.preventDefault()
       e.stopPropagation()
       if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation()
@@ -396,7 +355,9 @@ export default function Tecyh() {
       window.removeEventListener('wheel', block, optsNP)
       window.removeEventListener('touchmove', block, optsNP)
     }
-  }, [isAnimating])
+  }, [isAnimating, isSequentialOpening])
+
+  const arrowHideDuringSeq = isSequentialOpening ? "opacity-0 pointer-events-none" : "opacity-100"
 
   return (
     <div
@@ -407,14 +368,13 @@ export default function Tecyh() {
       aria-busy={isAnimating ? 'true' : 'false'}
     >
       <Navbar />
+
       {/* Screen 1 GROUP */}
       <div ref={s1GroupRef} className="fixed inset-0">
-        {/* Screen 1 base */}
         <div ref={baseS1Ref} className="fixed inset-0">
           <TechOne />
         </div>
 
-        {/* Bright image for overlay 1 ⇄ 2 */}
         <img
           ref={brightRef}
           src={Bright}
@@ -424,17 +384,14 @@ export default function Tecyh() {
           loading="lazy"
         />
 
-        {/* Overlays — single mover that slides like the example */}
         <div className="absolute inset-0 z-40 h-screen w-full overflow-hidden select-none pointer-events-auto">
           <div
             ref={overlayMoverRef}
             className="absolute inset-0 will-change-transform transition-transform duration-700 ease-out translate-y-0"
           >
-            {/* Layer 1 */}
             <div className="relative h-screen w-full">
               <TechOverlayOne />
             </div>
-            {/* Layer 2 */}
             <div className="relative h-screen w-full">
               <TechOverlayTwo containerRef={overlayMoverRef}/>
             </div>
@@ -447,18 +404,16 @@ export default function Tecyh() {
         <TechTwo />
       </div>
 
-      {/* --- PROGRESS DOTS (TeamPage look/feel) --- */}
+      {/* --- PROGRESS DOTS --- */}
       <div className="absolute top-1/2 right-8 -translate-y-1/2 flex flex-col gap-6 z-[60]">
         {DOT_SECTIONS.map((s) => {
-          const activeDot = at === 0 ? null : at // on overlay1, all dots are empty
+          const activeDot = at === 0 ? null : at
           return (
             <div key={s.id} className="relative group flex items-center">
-              {/* Hover label */}
               <span className="absolute right-8 opacity-0 group-hover:opacity-100 transition-opacity text-sm text-white whitespace-nowrap">
                 {s.label}
               </span>
 
-              {/* Dot */}
               <button
                 onClick={() => directTo(s.target)}
                 aria-label={s.label}
@@ -471,66 +426,57 @@ export default function Tecyh() {
         })}
       </div>
 
-
-      
-        <div
-        className={`absolute bottom-16 right-5 z-[60] group transition-opacity duration-700 flex items-center ${at === 0 ? "opacity-0 pointer-events-none" : "opacity-100"
-          }`}
+      {/* UP ARROW */}
+      <div
+        className={`absolute bottom-16 right-5 z-[60] group transition-opacity duration-700 flex items-center ${
+          at === 0 ? "opacity-0 pointer-events-none" : arrowHideDuringSeq
+        }`}
       >
-
-        {/* Chevron icon button */}
         <button
           onClick={() => goUp()}
           aria-label="Up"
           className="p-2 hover:opacity-80 transition-opacity"
         >
           <ChevronUp className="text-white" size={32} />
-
         </button>
       </div>
 
-
+      {/* DOWN ARROW */}
       <div
-        className={`absolute bottom-8 right-5 z-[60] group transition-opacity duration-700 flex items-center ${at === 2 ? "opacity-0 pointer-events-none" : "opacity-100"
-          }`}
+        className={`absolute bottom-8 right-5 z-[60] group transition-opacity duration-700 flex items-center ${
+          at === 2 ? "opacity-0 pointer-events-none" : arrowHideDuringSeq
+        }`}
       >
-
-        {/* Chevron icon button */}
         <button
           onClick={() => goDown()}
           aria-label="Down"
           className="p-2 hover:opacity-80 transition-opacity"
         >
           <ChevronDown className="text-white" size={32} />
-
         </button>
       </div>
 
       {/* --- NEXT ARROW (visible only on 2nd screen) --- */}
-<div
+      <div
         className={`absolute bottom-8 right-5 z-[60] group transition-opacity duration-700 flex items-center ${
-          at === 2 ? "opacity-100" : "opacity-0 pointer-events-none"
+          at === 2 ? arrowHideDuringSeq : "opacity-0 pointer-events-none"
         }`}
       >
-        {/* Hover label to the left, styled like dot labels */}
         <span className="absolute right-12 opacity-0 group-hover:opacity-100 transition-opacity text-sm text-white whitespace-nowrap">
           Learn more about our team
         </span>
 
-        {/* Chevron icon button */}
         <button
           onClick={() => navigate("/team")}
           aria-label="Continue"
           className="p-2 hover:opacity-80 transition-opacity"
         >
           <ChevronRight className="text-white" size={32} />
-
         </button>
       </div>
-      {at != 2 && (
-        <div
-          className="absolute bottom-11 right-18 z-[70] text-white/70 text-sm md:text-base animate-pulse select-none pointer-events-auto"
-        >
+
+      {at == 0 && (
+        <div className="absolute bottom-11 right-18 z-[70] text-white/70 text-sm md:text-base animate-pulse select-none pointer-events-auto">
           Click or use arrow keys to navigate:
         </div>
       )}

@@ -360,6 +360,9 @@ export default function Test() {
             <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-20 text-[#f8da9c] text-xl font-bahnschrift">
               Core Team
             </div>
+            <div className="absolute bottom-5 z-20 text-white/70 text-sm font-bahnschrift">
+              ← → to move, tap to flip
+            </div>
           </div>
         )}
 
@@ -382,6 +385,9 @@ export default function Test() {
             <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-20 text-[#f8da9c] text-xl font-bahnschrift">
               Advisors
             </div>
+            <div className="absolute bottom-5 z-20 text-white/70 text-sm font-bahnschrift">
+              ← → to move, tap to flip
+            </div>
           </div>
         )}
 
@@ -392,7 +398,7 @@ export default function Test() {
             }`}
           >
             <h2 className="absolute top-[25%] font-bahnschrift text-4xl md:text-6xl text-[#e0e0e0] px-6 text-center leading-tight max-w-[90vw] mx-auto">
-              Swipe down to learn about our timeline
+              Learn about Rise's journey ↓
             </h2>
             {/* Chevron icon button */}
             <button

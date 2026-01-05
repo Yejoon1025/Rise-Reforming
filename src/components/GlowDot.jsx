@@ -529,6 +529,13 @@ export const GlowDot = forwardRef(function GlowDot(props, _ref) {
             <p className="text-center text-base sm:text-lg md:text-xl lg:text-2xl leading-snug">
               {text}
             </p>
+            {hasBoxNumber && (
+  <div className="absolute bottom-2 right-2 z-50 pointer-events-none">
+    <span className="inline-flex h-5 min-w-5 px-1.5 items-center justify-center rounded-full bg-[#0c1a22]/90 text-white/90 text-[11px] font-medium leading-none">
+      {String(boxNumber)}
+    </span>
+  </div>
+)}
           </div>
         </div>
       )}

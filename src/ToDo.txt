@@ -1,26 +1,14 @@
-Done:
-- Movement
-- New opening - Explain Animation X
-- New logo
-- Scrolling for team and news
+Completed:
+- Block nav when opening
+- Textbox numbers
 - Instructions for each page
-- Get rid of flipping, Move icons
-- Favicon
-- Edge limit, Arrows, Lighting, Button to Tech Page
+- Keys for cards, update instructions
+- Mobile no auto flip
+- Mobile swipe left
+- Mobile instructions
+- Font
 
-To Do:
-- //Prettier graphics models
-- //Better Quests / Text on Game
-- //Additional Things to game
-- Seperate components
-
-- Phone font
-- Fix mobile card and timeline (More robust)
-- Maybe add scrolling back, with opening pause.
-- Move game data online too
-
-Cancelled:
-- Textbox order / textbox numbers
-- Delay page when opening
-
-Replace new homepage
+Later:
+- Add scroll
+- Mobile Loading
+- Timeline top arrow

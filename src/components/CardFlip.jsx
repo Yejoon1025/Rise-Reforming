@@ -314,6 +314,40 @@ export function CardFlip({
     }
   }, [isSweeping, reversed, isIntersecting])
 
+  // keyboard → discrete nav (left / right arrows)
+useEffect(() => {
+  if (!isIntersecting) return
+
+  const onKeyDown = (e) => {
+    if (isSweeping) return
+
+    // Ignore typing contexts
+    const tag = document.activeElement?.tagName
+    if (tag === "INPUT" || tag === "TEXTAREA" || document.activeElement?.isContentEditable) {
+      return
+    }
+
+    // Visual direction must respect mirroring
+    // ArrowRight = forward visually
+    // ArrowLeft  = backward visually
+    if (e.key === "ArrowRight") {
+      e.preventDefault()
+      resetInactivityTimer()
+      go(reversed ? -1 : +1)
+    }
+
+    if (e.key === "ArrowLeft") {
+      e.preventDefault()
+      resetInactivityTimer()
+      go(reversed ? +1 : -1)
+    }
+  }
+
+  window.addEventListener("keydown", onKeyDown)
+  return () => window.removeEventListener("keydown", onKeyDown)
+}, [isIntersecting, isSweeping, reversed])
+
+
   //Description helper
     const renderInfoDescription = desc => {
     if (!desc) return "No description provided."
@@ -864,7 +898,7 @@ export function CardFlip({
                   aria-pressed={isFlipped && appearInZone}
                   onClick={() => onCardClick(di, it, appearInZone)}
                   onKeyDown={e => (e.key === "Enter" || e.key === " ") && onCardClick(di, it, appearInZone)}
-                  className={`group relative rounded-2xl overflow-hidden select-none ${appearInZone ? "cursor-pointer" : "cursor-default"}`}
+                  className={`group relative rounded-2xl overflow-hidden select-none cursor-default`}
                   style={{
                     width: computedCardW,
                     height: computedCardH,

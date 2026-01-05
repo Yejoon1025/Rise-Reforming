@@ -8,17 +8,32 @@
   font-display: swap;
 }
 
-/* Tailwind v4 theming: sets what `font-sans` means */
+/* Tailwind v4 theming: defines what `font-sans` means */
 @theme {
-  --font-sans: "Bahnschrift", "Barlow", system-ui, -apple-system, "Segoe UI",
-               Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+  --font-sans:
+    "Bahnschrift",
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Text",
+    "SF Pro Display",
+    "Barlow",
+    system-ui,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    "Noto Sans",
+    "Liberation Sans",
+    sans-serif;
 
   --color-brand-dark: #1a1f23;
 }
 
-/* Apply Tailwind’s font-sans to the whole page */
+/* Apply Tailwind’s font-sans globally */
 @layer base {
-  body { @apply font-sans; }
+  body {
+    @apply font-sans;
+  }
 }
 
 /* Background brighten (container) */

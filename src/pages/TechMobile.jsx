@@ -601,7 +601,7 @@ export default function Test() {
             }`}
           >
             <h2 className="absolute top-[40%] font-bahnschrift text-4xl md:text-6xl text-[#e0e0e0] px-6 text-center leading-tight max-w-[90vw] mx-auto">
-              Go down to learn about our team
+              Learn about our team ↓
             </h2>
           </div>
         )}

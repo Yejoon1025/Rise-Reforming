@@ -380,8 +380,8 @@ export default function Test() {
             <h1 className="font-bahnschrift text-4xl md:text-6xl text-[#e0e0e0] px-6 text-center leading-tight max-w-[70vw] mx-auto">
               It's time for a paradigm shift in chemical manufacturing
             </h1>
-            <div className="absolute bottom-5 right-20 z-20 text-white text-sm font-bahnschrift animate-bounce">
-              Use arrows to navigate:
+            <div className="absolute bottom-5 z-20 text-white/70 text-sm font-bahnschrift">
+              Use arrows or wwipe to navigate
             </div>
           </div>
         )}
@@ -695,7 +695,7 @@ export default function Test() {
             }`}
           >
             <h2 className="absolute top-[40%] font-bahnschrift text-4xl md:text-6xl text-[#e0e0e0] px-6 text-center leading-tight max-w-[90vw] mx-auto">
-              Go down to learn about our technology
+              Learn about Rise's process ↓
             </h2>
           </div>
         )}

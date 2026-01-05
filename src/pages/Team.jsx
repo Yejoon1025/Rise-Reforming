@@ -17,10 +17,10 @@ const PROFILE_URL =
 export default function Team() {
   const navigate = useNavigate()
 
-  // page: 0 = hero, 1 = exec team, 2 = advisors
+  // page: 0 = hero, 1 = exec team, 2 = advisors, 3 = CTA to News
   const [page, setPage] = useState(0)
   const [at, setAt] = useState(0)
-  const MAX_PAGE = 2
+  const MAX_PAGE = 3
 
   // profiles loaded from remote JSON
   const [exec, setExec] = useState([])
@@ -78,7 +78,7 @@ export default function Team() {
       if (unlockRef.current) clearTimeout(unlockRef.current)
       unlockRef.current = setTimeout(() => setLocked(false), TRANSITION_MS + 60)
     },
-    [locked, page]
+    [locked, page, MAX_PAGE]
   )
 
   // Adjustable subheading left offset (in rem units by default, tailwind spacing scale)
@@ -150,12 +150,13 @@ export default function Team() {
       window.removeEventListener("keydown", handleKeyDown)
       window.removeEventListener("wheel", handleWheel)
     }
-  }, [page, locked, goToPage, navigate])
+  }, [page, locked, goToPage, navigate, MAX_PAGE])
 
   // Dot navigation config (hero is not a dot)
   const sections = [
     { id: 1, label: "Core Team" },
     { id: 2, label: "Advisors" },
+    { id: 3, label: "Next" },
   ]
   const lastDotId = sections[sections.length - 1].id
 
@@ -213,7 +214,7 @@ export default function Team() {
             />
           </div>
           <div className="absolute bottom-20 z-[70] text-white/70 text-sm md:text-base animate-pulse select-none pointer-events-auto">
-            Click on anyone to learn about them!
+            Click on cards or use arrows to navigate
           </div>
         </section>
 
@@ -235,9 +236,22 @@ export default function Team() {
             />
           </div>
         </section>
+
+        {/* --- PAGE 4: CTA TO NEWS --- */}
+        <section className="h-screen w-full flex items-center justify-center relative">
+          <div className="w-full flex items-center justify-center px-6">
+            <h1 className="font-bahnschrift text-3xl md:text-5xl text-[#e0e0e0] text-center leading-tight max-w-[70vw] mx-auto">
+              Head to the news tab to learn more about our journey!
+            </h1>
+          </div>
+
+          <div className="absolute bottom-20 z-[70] text-white/70 text-sm md:text-base animate-pulse select-none pointer-events-none">
+            Press →
+          </div>
+        </section>
       </div>
 
-      {/* --- PROGRESS DOTS (2 dots) --- */}
+      {/* --- PROGRESS DOTS (3 dots) --- */}
       <div className="absolute top-1/2 right-8 -translate-y-1/2 flex flex-col gap-6 z-[20]">
         {sections.map((s) => (
           <div key={s.id} className="relative group flex items-center">
@@ -293,7 +307,7 @@ export default function Team() {
         }`}
       >
         <span className="absolute right-12 opacity-0 group-hover:opacity-100 transition-opacity text-sm text-white whitespace-nowrap">
-          Learn more about our journey
+          Go to News
         </span>
         <button
           onClick={() => navigate("/news")}
