@@ -1,12 +1,6 @@
-Completed:
-- Block nav when opening
-- Textbox numbers
-- Instructions for each page
-- Keys for cards, update instructions
-- Mobile no auto flip
-- Mobile swipe left
-- Mobile instructions
-- Font
+Now:
+- Investors - Done
+- Video
 
 Later:
 - Add scroll

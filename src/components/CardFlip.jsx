@@ -734,7 +734,7 @@ useEffect(() => {
           className="pointer-events-none absolute"
           style={{
             top: dotTop - GAP_PX - computedCardH,
-            left: anchorXScreen - articleW,
+            left: Math.min(anchorXScreen - articleW, anchorXScreen - 280),
             transform: "translate(-50%, 0)",
             zIndex: 40,
             width: computedCardW,

@@ -1,4 +1,24 @@
 {
+  "INVESTORS": [
+    {
+      "id": "1",
+      "name": "Lead Institutional Investor",
+      "title": "Seed Investor",
+      "photo": {
+        "src": "776.png",
+        "alt": "test"
+      },
+      "description": [
+        "- Climate and industrial decarbonization focus",
+        "- Early-stage infrastructure and energy technologies"
+      ],
+      "mobileDescription": "Seed-stage investor focused on climate and industrial decarbonization",
+      "quote": "",
+      "linkedin": "",
+      "website": ""
+    }
+  ],
+  
   "EXEC": [
     {
       "id": "1",
@@ -95,18 +115,24 @@
     },
     {
       "id": "2",
-      "name": "Dr. Mark Stoykovich",
+      "name": "Dr. Garry Cooper",
       "title": [
-        "Scientific Advisor"
+        "Growth Advisor"
       ],
       "photo": {
-        "src": "https://raw.githubusercontent.com/Yejoon1025/rise-content/main/images/Mark.png",
-        "alt": "Mark"
+        "src": "https://raw.githubusercontent.com/Yejoon1025/rise-content/main/images/garrycooper.jpg",
+        "alt": "Garry"
       },
-      "mobileDescription": "Director of Undergraduate Study at University of Chicago Molecular Engineering Department",
+      "description": [
+        "- Co-Founder & CEO at Rheaply", 
+        "- General Partner at LongJump VC", 
+        "- Vice Chair at P33 Chicago",
+        "- Board Member at 1871"
+      ],
+      "mobileDescription": "Co-Founder & CEO at Rheaply, General Partner at Longjump VC, Vice Chair at P33 Chicago, Board Member at 1871",
       "quote": "",
-      "description": "- University of Chicago Molecular Engineering Senior Instructional Professor & Director of Undergraduate Studies",
-      "email": "stoykovich@uchicago.edu"
+      "linkedin": "https://www.linkedin.com/in/garrycooperphd/",
+      "email": "garry@rheaply.com"
     },
     {
       "id": "3",

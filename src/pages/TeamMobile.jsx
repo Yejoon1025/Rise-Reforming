@@ -1,12 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import bg0 from "../assets/TableDark.png";
 import bg1 from "../assets/TableBright.png";
-import { GlowDot } from "../components/GlowDot";
-import { GlowDotMobile } from "../components/GlowDotMobile";
-import { GlowDotProvider } from "../components/GlowDotProvider";
-import * as text from "../data/PageContent";
 import MobileNavbar from "../components/MobileNavbar";
 import { ChevronDown } from "lucide-react";
 import { CardFlipMobile } from "../components/CardFlipMobile";
@@ -15,32 +10,28 @@ import { CardFlipMobile } from "../components/CardFlipMobile";
 const PROFILE_URL =
   "https://raw.githubusercontent.com/Yejoon1025/rise-content/main/Profile.json";
 
-export default function Test() {
-  const maxPg = 3; // minus one
+export default function TeamMobile() {
+  // Pages:
+  // 0 = hero
+  // 1 = core team
+  // 2 = advisors
+  // 3 = investors   (NEW)
+  // 4 = CTA -> news (moved down)
+  const maxPg = 4; // last index
   const [pg, setPg] = useState(0);
 
-  const pos = [0, 0.3, -0.3, 0]; // Reverse from middle
+  // Horizontal parallax positions for the background image per page.
+  // Keep it subtle; clamping logic will prevent out-of-bounds anyway.
+  const pos = [0, 0.3, -0.3, 0.3, 0];
 
   const containerRef = useRef(null);
   const widthRef = useRef(0);
   const [width, setWidth] = useState(0);
-  useEffect(() => {
-    widthRef.current = width;
-    setOffset(calcOffset(pos[pg]));
-  }, [width]);
 
   const maxRef = useRef(0);
   const [max, setMax] = useState(0);
-  useEffect(() => {
-    maxRef.current = max;
-  }, [max]);
 
-  const [topLeft, setTopLeft] = useState(0);
   const [offset, setOffset] = useState(0);
-  useEffect(() => {
-    setTopLeft(currentXP());
-  }, [offset]);
-
   const [moving, setMoving] = useState(0);
 
   const imgRef = useRef(null);
@@ -50,6 +41,7 @@ export default function Test() {
   // --- Profiles fetched from remote JSON ---
   const [exec, setExec] = useState([]);
   const [advisors, setAdvisors] = useState([]);
+  const [investors, setInvestors] = useState([]); // NEW
 
   useEffect(() => {
     const fetchProfiles = async () => {
@@ -61,6 +53,7 @@ export default function Test() {
         const data = await res.json();
         setExec(data.EXEC || []);
         setAdvisors(data.ADVISORS || []);
+        setInvestors(data.INVESTORS || []); // NEW (matches desktop)
       } catch (err) {
         console.error("Error loading profiles from GitHub (mobile):", err);
       }
@@ -71,13 +64,10 @@ export default function Test() {
 
   // --- Viewport-fit: eliminate mobile overscroll + toolbar jitter
   useEffect(() => {
-    // Prevent scroll chaining / rubber banding
     const prevBodyOverscroll = document.body.style.overscrollBehaviorY;
     document.body.style.overscrollBehaviorY = "none";
 
-    // Ensure the app fully pins to the viewport height
     const setVh = () => {
-      // modern browsers support dvh; keep a fallback anyway
       document.documentElement.style.setProperty(
         "--app-dvh",
         `${window.innerHeight}px`
@@ -85,6 +75,7 @@ export default function Test() {
     };
     setVh();
     window.addEventListener("resize", setVh);
+
     return () => {
       document.body.style.overscrollBehaviorY = prevBodyOverscroll;
       window.removeEventListener("resize", setVh);
@@ -95,6 +86,7 @@ export default function Test() {
   const onLoad = useCallback(() => {
     const dim = imgRef.current;
     if (!dim) return;
+
     const height = window.innerHeight; // pairs with 100dvh container
     const widthAtHeight = (dim.naturalWidth * height) / dim.naturalHeight;
 
@@ -106,44 +98,45 @@ export default function Test() {
     setMax(maxOffset);
   }, []);
 
-  const goDown = useCallback(() => {
-    if (pg === maxPg) {
-      navigate("/news");
-      return;
-    }
-    setMoving(1);
-    setOffset(calcOffset(pos[pg + 1]));
-    setPg(pg + 1);
-  }, [pg, navigate]);
-
-  const goUp = useCallback(() => {
-    if (pg === 0) return;
-    setMoving(1);
-    setOffset(calcOffset(pos[pg - 1]));
-    setPg(pg - 1);
-  }, [pg]);
-
-  const currentXP = () => {
-    const xPercentage =
-      (0.5 * width - offset - window.innerWidth / 2) / width;
-    return xPercentage;
-  };
-
   const calcOffset = (newPos) => {
     const w = widthRef.current;
     const m = maxRef.current;
     const newOffset = w * newPos;
+
     if (newOffset < 0 && newOffset < -m) return -m;
     if (newOffset > 0 && newOffset > m) return m;
     return newOffset;
   };
+
+  // Keep offset synced when width changes (e.g., orientation)
+  useEffect(() => {
+    setOffset(calcOffset(pos[pg] ?? 0));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [width]);
+
+  const goDown = useCallback(() => {
+    if (pg === maxPg) {
+      navigate("/news"); // last page continues to News
+      return;
+    }
+    setMoving(1);
+    setOffset(calcOffset(pos[pg + 1] ?? 0));
+    setPg(pg + 1);
+  }, [pg, maxPg, navigate]);
+
+  const goUp = useCallback(() => {
+    if (pg === 0) return;
+    setMoving(1);
+    setOffset(calcOffset(pos[pg - 1] ?? 0));
+    setPg(pg - 1);
+  }, [pg]);
 
   // -----------------------------
   // Scroll / Gesture Logic
   // -----------------------------
   const THROTTLE_MS = 400;
 
-  // Keep EMA for wheel/trackpad only (desktop)
+  // Wheel/trackpad EMA (desktop-ish usage)
   const EMA_PERIOD = 40;
   const ALPHA = 2 / (EMA_PERIOD + 1);
   const emaRef = useRef(0);
@@ -167,9 +160,9 @@ export default function Test() {
     return false;
   }, []);
 
-  // Touch-specific (mobile): simple, robust vertical swipe
-  const SWIPE_THRESHOLD_PX = 40; // min vertical delta
-  const VERTICAL_DOMINANCE_RATIO = 1.15; // |dy| must exceed |dx| * ratio
+  // Touch swipe (mobile)
+  const SWIPE_THRESHOLD_PX = 40;
+  const VERTICAL_DOMINANCE_RATIO = 1.15;
   const gestureTriggeredRef = useRef(false);
   const touchStart = useRef({ x: null, y: null });
 
@@ -212,7 +205,6 @@ export default function Test() {
       else if (e.deltaY > 0) goDown();
     };
 
-    // Touch events (non-passive so we can prevent default scroll)
     const onTouchStart = (e) => {
       if (e.touches?.length) {
         gestureTriggeredRef.current = false;
@@ -222,19 +214,15 @@ export default function Test() {
         };
       }
     };
+
     const onTouchMove = (e) => {
       const ts = touchStart.current;
-      if (
-        ts.x == null ||
-        ts.y == null ||
-        gestureTriggeredRef.current
-      )
-        return;
+      if (ts.x == null || ts.y == null || gestureTriggeredRef.current) return;
 
       const dx = (e.touches?.[0]?.clientX ?? ts.x) - ts.x;
       const dy = (e.touches?.[0]?.clientY ?? ts.y) - ts.y;
 
-      // If we’re likely to consume this gesture, prevent native scrolling
+      // If we're likely to consume this gesture, prevent native scrolling
       if (Math.abs(dy) > Math.abs(dx)) {
         e.preventDefault();
       }
@@ -243,6 +231,7 @@ export default function Test() {
         gestureTriggeredRef.current = true;
       }
     };
+
     const endGesture = () => {
       gestureTriggeredRef.current = false;
       touchStart.current = { x: null, y: null };
@@ -283,7 +272,7 @@ export default function Test() {
 
   const imgCommon = {
     className: "w-auto max-w-none select-none pointer-events-none",
-    style: { height: "100dvh" }, // exact viewport fit
+    style: { height: "100dvh" },
     onLoad,
     initial: { opacity: 0 },
     animate: { opacity: 1, x: offset },
@@ -301,24 +290,29 @@ export default function Test() {
       ref={containerRef}
       className="fixed inset-0 overflow-hidden bg-black"
       style={{
-        height: "var(--app-dvh, 100dvh)", // uses innerHeight; falls back to 100dvh
-        touchAction: "none", // tells UA we’ll handle gestures
+        height: "var(--app-dvh, 100dvh)",
+        touchAction: "none",
       }}
     >
       <div className="z-100">
         <MobileNavbar />
       </div>
+
       {/* Page number display */}
       <div className="absolute bottom-2 left-2 z-20 text-white text-sm font-bahnschrift">
         {pg + 1}/{maxPg + 1}
       </div>
+
+      {/* Background image */}
       <div className="absolute left-1/2 top-0 -translate-x-1/2 z-0">
         <AnimatePresence initial={false} mode="sync">
           <motion.img key="bg1" ref={imgRef} src={bg1} alt="" {...imgCommon} />
         </AnimatePresence>
       </div>
 
+      {/* Foreground pages */}
       <div className="relative z-10 h-full w-full">
+        {/* PAGE 0: HERO */}
         {pg === 0 && (
           <div
             className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
@@ -333,14 +327,12 @@ export default function Test() {
               aria-label="Continue"
               className="p-2 hover:opacity-80 transition-opacity absolute top-[85%]"
             >
-              <ChevronDown
-                className="text-[#f8da9c] animate-bounce"
-                size={32}
-              />
+              <ChevronDown className="text-[#f8da9c] animate-bounce" size={32} />
             </button>
           </div>
         )}
 
+        {/* PAGE 1: CORE TEAM */}
         {pg === 1 && (
           <div
             className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
@@ -366,6 +358,7 @@ export default function Test() {
           </div>
         )}
 
+        {/* PAGE 2: ADVISORS */}
         {pg === 2 && (
           <div
             className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
@@ -391,25 +384,49 @@ export default function Test() {
           </div>
         )}
 
+        {/* PAGE 3: INVESTORS (NEW) */}
         {pg === 3 && (
           <div
             className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
               moving === 0 ? "opacity-100" : "opacity-0"
             }`}
           >
+            <CardFlipMobile
+              items={investors}
+              color="#3ca6a6"
+              progressColor="#3ca6a6"
+              dotSize={12}
+              cardWidth={250}
+              overlapPx={-20}
+              anchorXRatio={0.5}
+              anchorYRatio={0.2}
+            />
+            <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-20 text-[#f8da9c] text-xl font-bahnschrift">
+              Notable Investors
+            </div>
+            <div className="absolute bottom-5 z-20 text-white/70 text-sm font-bahnschrift">
+              ← → to move, tap to flip
+            </div>
+          </div>
+        )}
+
+        {/* PAGE 4: CTA TO NEWS (MOVED) */}
+        {pg === 4 && (
+          <div
+            className={`h-full w-full flex items-center justify-center transition-opacity duration-150 ${
+              moving === 0 ? "opacity-100" : "opacity-0"
+            }`}
+          >
             <h2 className="absolute top-[25%] font-bahnschrift text-4xl md:text-6xl text-[#e0e0e0] px-6 text-center leading-tight max-w-[90vw] mx-auto">
-              Learn about Rise's journey ↓
+              Head to the news tab to learn more about our journey ↓
             </h2>
-            {/* Chevron icon button */}
+
             <button
-              onClick={() => navigate("/team")}
-              aria-label="Continue"
+              onClick={() => navigate("/news")}
+              aria-label="Go to News"
               className="p-2 hover:opacity-80 transition-opacity absolute top-[85%]"
             >
-              <ChevronDown
-                className="text-[#f8da9c] animate-bounce"
-                size={32}
-              />
+              <ChevronDown className="text-[#f8da9c] animate-bounce" size={32} />
             </button>
           </div>
         )}

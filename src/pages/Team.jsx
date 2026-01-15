@@ -1,10 +1,13 @@
 // src/pages/TeamPage.jsx
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
 import { CardFlip } from "../components/CardFlip"
 import altBg from "../assets/TableBright.png"
 import Navbar from "../components/Navbar"
 import { ChevronDown, ChevronRight, ChevronUp } from "lucide-react"
+
+// Test
+//import {INVESTORS} from "../data/Profiles"
 
 // OPTIONAL: replace with your alternate background image
 import bg from "../assets/TableDark.png"
@@ -17,14 +20,15 @@ const PROFILE_URL =
 export default function Team() {
   const navigate = useNavigate()
 
-  // page: 0 = hero, 1 = exec team, 2 = advisors, 3 = CTA to News
+  // page: 0 = hero, 1 = exec team, 2 = advisors, 3 = all profiles (cardflip), 4 = CTA to News
   const [page, setPage] = useState(0)
   const [at, setAt] = useState(0)
-  const MAX_PAGE = 3
+  const MAX_PAGE = 4
 
   // profiles loaded from remote JSON
   const [exec, setExec] = useState([])
   const [advisors, setAdvisors] = useState([])
+  const [investors, setInvestors] = useState([])
 
   // --- Lock navigation during transitions to prevent skipping multiple pages
   // Faster lock to feel snappier (similar to TimeLine.jsx)
@@ -53,6 +57,7 @@ export default function Team() {
         // Profile.json has top-level EXEC and ADVISORS keys
         setExec(data.EXEC || [])
         setAdvisors(data.ADVISORS || [])
+        setInvestors(data.INVESTORS || [])
       } catch (err) {
         console.error("Error loading profiles from GitHub:", err)
       }
@@ -156,7 +161,8 @@ export default function Team() {
   const sections = [
     { id: 1, label: "Core Team" },
     { id: 2, label: "Advisors" },
-    { id: 3, label: "Next" },
+    { id: 3, label: "Investors" },
+    { id: 4, label: "Next" },
   ]
   const lastDotId = sections[sections.length - 1].id
 
@@ -237,7 +243,26 @@ export default function Team() {
           </div>
         </section>
 
-        {/* --- PAGE 4: CTA TO NEWS --- */}
+        {/* --- PAGE 4: ALL PROFILES (CARD FLIP) --- */}
+        <section className="h-screen w-full flex justify-center relative">
+          <h2 className="absolute top-[20%] font-bahnschrift text-2xl md:text-4xl text-[#f8da9c] px-6 text-center">
+            Notable Investors:
+          </h2>
+          <div className="w-full absolute bottom-0 pb-8">
+            <CardFlip
+              items={investors}
+              color="#3ca6a6"
+              progressColor="#3ca6a6"
+              dotSize={12}
+              cardWidth={250}
+              overlapPx={-20}
+              anchorXRatio={0.35}
+              anchorYRatio={0.1}
+            />
+          </div>
+        </section>
+
+        {/* --- PAGE 5: CTA TO NEWS --- */}
         <section className="h-screen w-full flex items-center justify-center relative">
           <div className="w-full flex items-center justify-center px-6">
             <h1 className="font-bahnschrift text-3xl md:text-5xl text-[#e0e0e0] text-center leading-tight max-w-[70vw] mx-auto">
@@ -251,7 +276,7 @@ export default function Team() {
         </section>
       </div>
 
-      {/* --- PROGRESS DOTS (3 dots) --- */}
+      {/* --- PROGRESS DOTS (4 dots) --- */}
       <div className="absolute top-1/2 right-8 -translate-y-1/2 flex flex-col gap-6 z-[20]">
         {sections.map((s) => (
           <div key={s.id} className="relative group flex items-center">
