@@ -1,8 +1,10 @@
 Now:
 - Investors - Done
-- Video
+- Video - Done
+- Search Text - Done
+- New intro? - Later
 
 Later:
 - Add scroll
-- Mobile Loading
+- Mobile Loading (Photo not moving sometimes)
 - Timeline top arrow

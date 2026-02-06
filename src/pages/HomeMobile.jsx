@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import bg0 from "../assets/HomeOneDark.png";
 import bg1 from "../assets/HomeOneLight.png";
-import bg2 from "../assets/HomeTwo.png";
+import bg2 from "../assets/HomeTwoNew.png";
 import bg3 from "../assets/HomeThree.png";
 import bg4 from "../assets/Globe.png";
 import { GlowDot } from "../components/GlowDot";
@@ -381,7 +381,7 @@ export default function Test() {
               It's time for a paradigm shift in chemical manufacturing
             </h1>
             <div className="absolute bottom-5 z-20 text-white/70 text-sm font-bahnschrift">
-              Use arrows or wwipe to navigate
+              Use arrows or swipe to navigate
             </div>
           </div>
         )}
